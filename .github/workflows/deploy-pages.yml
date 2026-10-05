@@ -30,7 +30,7 @@ jobs:
 
       - name: Build
         env:
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH || '/' }}
           VITE_API_URL: ${{ vars.VITE_API_URL || 'https://server.quadrantcare.uk' }}
         run: npm run build
 
