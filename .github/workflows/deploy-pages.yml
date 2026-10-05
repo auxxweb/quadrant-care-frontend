@@ -31,7 +31,7 @@ jobs:
       - name: Build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://server.quadrantcare.uk' }}
         run: npm run build
 
       # GitHub Pages serves 404.html for unknown paths, which lets the SPA router handle deep links.
