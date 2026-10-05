@@ -1,7 +1,8 @@
 import { COMPANY_NAME } from '../../constants';
+import { assetUrl } from '../../config';
 import { cn } from '../../utils';
 
-export const LOGO_SRC = '/logo.png';
+export const LOGO_SRC = assetUrl('logo.png');
 
 export function BrandLogo({
   className,

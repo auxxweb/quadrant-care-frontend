@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { adminApi, auditApi, employeeApi, jobRoleApi, reportsApi, settingsApi } from '../../api/services';
+import { API_BASE_URL } from '../../config';
 import { Button, Card, ConfirmDialog, EmptyState, Input, Modal, PageHeader, Skeleton } from '../../components/ui';
 import { ActionButtons } from '../../components/ui/ActionButtons';
 import { ListFilters } from '../../components/filters/ListFilters';
@@ -289,7 +290,7 @@ export function ReportsPage() {
       <PageHeader
         title="Reports"
         subtitle={data ? `${items.length} entries · ${formatMinutes(data.totalMinutes ?? 0)}` : 'Search and filter timesheet records'}
-        actions={<a href={`/api/reports/timesheets?${csvParams.toString()}`}><Button variant="secondary">Export CSV</Button></a>}
+        actions={<a href={`${API_BASE_URL}/reports/timesheets?${csvParams.toString()}`}><Button variant="secondary">Export CSV</Button></a>}
       />
       {user?.role === 'ADMIN' && (
         <ScopeTabs

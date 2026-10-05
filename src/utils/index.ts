@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { UPLOADS_BASE_URL } from '../config';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -68,5 +69,5 @@ export function toInputDate(date: Date) {
 export function fileUrl(path?: string) {
   if (!path) return '';
   if (path.startsWith('http') || path.startsWith('data:')) return path;
-  return `/uploads/${path}`;
+  return `${UPLOADS_BASE_URL}/${path}`;
 }

@@ -12,7 +12,10 @@ const secureHeaders = {
   'X-DNS-Prefetch-Control': 'off',
 };
 
+const base = `/${(process.env.VITE_BASE_PATH ?? '').replace(/^\/+|\/+$/g, '')}/`.replace(/\/+/g, '/');
+
 export default defineConfig({
+  base,
   plugins: [
     react(),
     VitePWA({
@@ -29,14 +32,14 @@ export default defineConfig({
         'icons/apple-touch-icon.png',
       ],
       manifest: {
-        id: '/',
+        id: base,
         name: 'Quadrant Care',
         short_name: 'Quadrant Care',
         description: 'Quadrant Care Services Ltd staff timesheets',
         lang: 'en-GB',
         dir: 'ltr',
-        start_url: '/?source=pwa',
-        scope: '/',
+        start_url: `${base}?source=pwa`,
+        scope: base,
         display: 'standalone',
         display_override: ['standalone', 'minimal-ui', 'browser'],
         orientation: 'any',
@@ -47,10 +50,10 @@ export default defineConfig({
         launch_handler: { client_mode: ['navigate-existing', 'auto'] },
         handle_links: 'preferred',
         icons: [
-          { src: '/icons/pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: '/icons/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: '/icons/maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-          { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: `${base}icons/pwa-192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: `${base}icons/pwa-512.png`, sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: `${base}icons/maskable-192.png`, sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: `${base}icons/maskable-512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
@@ -58,7 +61,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: false,
-        navigateFallback: '/index.html',
+        navigateFallback: `${base}index.html`,
         navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /^\/socket\.io/],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
         runtimeCaching: [

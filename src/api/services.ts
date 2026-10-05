@@ -1,4 +1,5 @@
 import { api } from './client';
+import { API_BASE_URL } from '../config';
 import type { AuthUser, CareHome, ChatConversation, ChatMessage, ChatPerson, Employee, JobRole, NotificationItem, Paginated, Timesheet } from '../types';
 
 export const authApi = {
@@ -73,7 +74,7 @@ export const timesheetApi = {
   adminReject: (id: string, payload: object) => api.post(`/timesheets/${id}/admin-reject`, payload).then((r) => r.data),
   approve: (id: string, payload?: object) => api.post(`/timesheets/${id}/super-admin-approve`, payload ?? {}).then((r) => r.data),
   reject: (id: string, payload: object) => api.post(`/timesheets/${id}/super-admin-reject`, payload).then((r) => r.data),
-  pdfUrl: (id: string) => `/api/timesheets/${id}/pdf`,
+  pdfUrl: (id: string) => `${API_BASE_URL}/timesheets/${id}/pdf`,
   weekly: (params?: object) => api.get('/timesheets/summary/weekly', { params }).then((r) => r.data),
   monthly: (params?: object) => api.get('/timesheets/summary/monthly', { params }).then((r) => r.data),
 };
@@ -130,7 +131,7 @@ export const reportsApi = {
   timesheets: (params?: object) => api.get('/reports/timesheets', { params }).then((r) => r.data),
   hours: (params?: object) => api.get('/reports/hours', { params }).then((r) => r.data),
   careHomes: (params?: object) => api.get('/reports/care-homes', { params }).then((r) => r.data),
-  csvUrl: (params: URLSearchParams) => `/api/reports/timesheets?${params.toString()}&format=csv`,
+  csvUrl: (params: URLSearchParams) => `${API_BASE_URL}/reports/timesheets?${params.toString()}&format=csv`,
 };
 
 export const settingsApi = {

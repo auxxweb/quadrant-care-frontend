@@ -158,7 +158,7 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
   }
 
   async function downloadPdf() {
-    const res = await fetch(`/api/timesheets/${id}/pdf`, { headers: { Authorization: `Bearer ${getAccessToken()}` } });
+    const res = await fetch(timesheetApi.pdfUrl(id), { headers: { Authorization: `Bearer ${getAccessToken()}` } });
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

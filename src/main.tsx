@@ -9,6 +9,7 @@ import { ChatLiveProvider } from './chat/ChatLiveProvider';
 import { PwaManager } from './pwa/PwaManager';
 import './pwa/installEvent';
 import './index.css';
+import { ROUTER_BASENAME } from './config';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -17,7 +18,7 @@ const queryClient = new QueryClient({
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename={ROUTER_BASENAME}>
         <AuthProvider>
           <PwaManager>
             <ChatLiveProvider>

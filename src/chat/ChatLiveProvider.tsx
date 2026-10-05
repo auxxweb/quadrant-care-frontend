@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getAccessToken } from '../api/client';
 import { chatApi } from '../api/services';
+import { API_ORIGIN } from '../config';
 import { useAuth } from '../store/auth';
 import { inboxPath } from '../utils/chatLinks';
 import type { ChatConversation, ChatMessage } from '../types';
@@ -38,7 +39,7 @@ export function ChatLiveProvider({ children }: { children: ReactNode }) {
     }
     const token = getAccessToken();
     if (!token) return;
-    const socket = io({
+    const socket = io(API_ORIGIN || undefined, {
       path: '/socket.io',
       auth: { token },
       transports: ['websocket', 'polling'],

@@ -1,4 +1,6 @@
-export const LOGO_SRC = '/logo.png';
+import { assetUrl } from '../config';
+
+export const LOGO_SRC = assetUrl('logo.png');
 export const BRAND_BLUE = '#065FDF';
 export const APP_NAME = 'Quadrant Care';
 export const COMPANY_NAME = 'Quadrant Care Services Ltd';
