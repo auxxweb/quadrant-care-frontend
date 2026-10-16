@@ -4,11 +4,13 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip, AreaChart, Area, Car
 import { dashboardApi } from '../../api/services';
 import { Button, PageHeader, Skeleton, StatCard } from '../../components/ui';
 import { useAuth } from '../../store/auth';
+import { useProductivePanel } from '../../hooks/useMetricsFocus';
 import { formatMinutes } from '../../utils';
 
 export function SuperAdminDashboard() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const productivePanel = useProductivePanel();
   const { data, isLoading } = useQuery({ queryKey: ['sa-dashboard'], queryFn: dashboardApi.superAdmin });
   if (isLoading || !data) return <Skeleton className="h-96" />;
   const pie = [
@@ -23,8 +25,12 @@ export function SuperAdminDashboard() {
         subtitle="Workforce overview"
         actions={
           <div className="flex flex-wrap gap-2">
-            <Link to="/super-admin/employees/new"><Button>Add Employee</Button></Link>
-            <Link to="/super-admin/admins"><Button variant="secondary">Add Admin</Button></Link>
+            {!productivePanel && (
+              <>
+                <Link to="/super-admin/employees/new"><Button>Add Employee</Button></Link>
+                <Link to="/super-admin/admins"><Button variant="secondary">Add Admin</Button></Link>
+              </>
+            )}
             <Link to="/super-admin/approvals"><Button variant="accent">Admin requests</Button></Link>
             <Button
               variant="danger"
@@ -46,7 +52,15 @@ export function SuperAdminDashboard() {
         <StatCard label="Today's shifts" value={data.todayShifts} accent="bg-gradient-to-br from-cyan-500 to-teal-600" />
         <StatCard label="Pending admin reviews" value={data.pendingAdmin} accent="bg-gradient-to-br from-amber-500 to-orange-600" />
         <StatCard label="Admin requests" value={data.pendingApprovals} accent="bg-gradient-to-br from-fuchsia-500 to-violet-700" />
-        <StatCard label="Hours this month" value={formatMinutes(data.monthMinutes)} accent="bg-gradient-to-br from-emerald-500 to-teal-700" />
+        {productivePanel ? (
+          <StatCard
+            label="Hours this month"
+            value={formatMinutes(data.monthProductiveMinutes ?? 0)}
+            accent="bg-gradient-to-br from-indigo-500 to-blue-800"
+          />
+        ) : (
+          <StatCard label="Worked this month" value={formatMinutes(data.monthMinutes)} accent="bg-gradient-to-br from-emerald-500 to-teal-700" />
+        )}
       </div>
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <div className="card min-w-0 p-4">
@@ -59,11 +73,32 @@ export function SuperAdminDashboard() {
         </div>
         <div className="card min-w-0 p-4">
           <h3 className="mb-3 font-semibold">Hours by care home</h3>
-          <div className="h-56"><ResponsiveContainer><BarChart data={data.careHomeHours}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="_id" /><YAxis /><Tooltip /><Bar dataKey="minutes" fill="#065FDF" radius={8} /></BarChart></ResponsiveContainer></div>
+          <div className="h-56">
+            <ResponsiveContainer>
+              <BarChart data={data.careHomeHours}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="_id" />
+                <YAxis />
+                <Tooltip />
+                {productivePanel ? (
+                  <Bar dataKey="productiveMinutes" name="Hours" fill="#6366f1" radius={8} />
+                ) : (
+                  <Bar dataKey="minutes" name="Worked" fill="#065FDF" radius={8} />
+                )}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
         <div className="card min-w-0 p-4">
           <h3 className="mb-3 font-semibold">Employees with highest hours</h3>
-          <ul className="space-y-3">{data.topEmployees.map((item: { _id: string; minutes: number }) => <li key={item._id} className="flex justify-between"><span>{item._id}</span><strong>{formatMinutes(item.minutes)}</strong></li>)}</ul>
+          <ul className="space-y-3">
+            {(productivePanel ? (data.topProductiveEmployees ?? data.topEmployees) : data.topEmployees).map((item: { _id: string; minutes: number }) => (
+              <li key={item._id} className="flex justify-between gap-3">
+                <span>{item._id}</span>
+                <strong className="shrink-0">{formatMinutes(item.minutes)}</strong>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>

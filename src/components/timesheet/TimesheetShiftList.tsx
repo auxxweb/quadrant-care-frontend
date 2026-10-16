@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { Timesheet } from '../../types';
 import { formatDate, fileUrl } from '../../utils';
 import { StatusBadge } from '../ui';
+import { useProductivePanel } from '../../hooks/useMetricsFocus';
 
 export function TimesheetShiftList({
   items,
@@ -12,21 +13,33 @@ export function TimesheetShiftList({
   hrefFor: (item: Timesheet) => string;
   showEmployee?: boolean;
 }) {
-  const columns = [
-    'SL NO',
-    ...(showEmployee ? ['NAME'] : []),
-    'DATE',
-    'START',
-    'END',
-    'BREAK',
-    'HOURS',
-    'JOB ROLE',
-    'INCHARGE',
-    'SIGN',
-    'REMARKS',
-    'STATUS',
-    '',
-  ];
+  const productivePanel = useProductivePanel();
+  const columns = productivePanel
+    ? [
+        'SL NO',
+        ...(showEmployee ? ['NAME'] : []),
+        'DATE',
+        'HOURS',
+        'JOB ROLE',
+        'CARE HOME',
+        'STATUS',
+        '',
+      ]
+    : [
+        'SL NO',
+        ...(showEmployee ? ['NAME'] : []),
+        'DATE',
+        'START',
+        'END',
+        'BREAK',
+        'HOURS',
+        'JOB ROLE',
+        'INCHARGE',
+        'SIGN',
+        'REMARKS',
+        'STATUS',
+        '',
+      ];
   return (
     <>
       <div className="hidden overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 md:block dark:bg-slate-900 dark:ring-slate-800">
@@ -48,20 +61,32 @@ export function TimesheetShiftList({
                 <td className="px-3 py-3">{index + 1}</td>
                 {showEmployee && <td className="px-3 py-3 font-semibold">{item.employeeSnapshot.name}</td>}
                 <td className="px-3 py-3">{formatDate(item.date)}</td>
-                <td className="px-3 py-3">{item.startTime}</td>
-                <td className="px-3 py-3">{item.endTime}</td>
-                <td className="px-3 py-3">{item.breakDuration}m</td>
-                <td className="px-3 py-3">{item.totalHoursDisplay}</td>
+                {productivePanel ? (
+                  <td className="px-3 py-3">{item.productiveHoursDisplay ?? '0:00'}</td>
+                ) : (
+                  <>
+                    <td className="px-3 py-3">{item.startTime}</td>
+                    <td className="px-3 py-3">{item.endTime}</td>
+                    <td className="px-3 py-3">{item.breakDuration}m</td>
+                    <td className="px-3 py-3">{item.totalHoursDisplay}</td>
+                  </>
+                )}
                 <td className="px-3 py-3">{item.jobRoleSnapshot.name}</td>
-                <td className="px-3 py-3">{item.inchargeName || '—'}</td>
-                <td className="px-3 py-3">
-                  {signPath ? (
-                    <img src={fileUrl(signPath)} alt="Signature" className="h-8 max-w-[100px] object-contain" />
-                  ) : (
-                    '—'
-                  )}
-                </td>
-                <td className="px-3 py-3">{item.remarks || '—'}</td>
+                {productivePanel ? (
+                  <td className="px-3 py-3">{item.careHomeSnapshot.name}</td>
+                ) : (
+                  <>
+                    <td className="px-3 py-3">{item.inchargeName || '—'}</td>
+                    <td className="px-3 py-3">
+                      {signPath ? (
+                        <img src={fileUrl(signPath)} alt="Signature" className="h-8 max-w-[100px] object-contain" />
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="px-3 py-3">{item.remarks || '—'}</td>
+                  </>
+                )}
                 <td className="px-3 py-3"><StatusBadge status={item.status} /></td>
                 <td className="px-3 py-3">
                   <Link to={hrefFor(item)} className="font-semibold text-brand-600">View</Link>
@@ -87,22 +112,26 @@ export function TimesheetShiftList({
             <p>
               <span className="text-slate-500">Date:</span> {formatDate(item.date)}
             </p>
-            <p>
-              {item.startTime} → {item.endTime}
-            </p>
-            <p>Break {item.breakDuration} min · {item.totalHoursDisplay} hours</p>
-            <p>Job role: {item.jobRoleSnapshot.name}</p>
-            <p>Incharge: {item.inchargeName || '—'}</p>
-            {signPath && (
-              <div>
-                <p className="text-slate-500">{item.careHomeSignaturePath ? 'Care home admin sign' : 'Admin sign'}</p>
-                <img src={fileUrl(signPath)} alt="Signature" className="mt-1 h-10 max-w-[120px] object-contain" />
-              </div>
+            {productivePanel ? (
+              <p>{item.productiveHoursDisplay ?? '0:00'} hours</p>
+            ) : (
+              <>
+                <p>
+                  {item.startTime} → {item.endTime}
+                </p>
+                <p>Break {item.breakDuration} min · {item.totalHoursDisplay} hours</p>
+                <p>Incharge: {item.inchargeName || '—'}</p>
+                {signPath && (
+                  <div>
+                    <p className="text-slate-500">{item.careHomeSignaturePath ? 'Care home admin sign' : 'Admin sign'}</p>
+                    <img src={fileUrl(signPath)} alt="Signature" className="mt-1 h-10 max-w-[120px] object-contain" />
+                  </div>
+                )}
+              </>
             )}
-            <p>Remarks: {item.remarks || '—'}</p>
-            <Link to={hrefFor(item)} className="touch-btn mt-1 block w-full bg-white text-center text-brand-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-white">
-              View
-            </Link>
+            <p>Job role: {item.jobRoleSnapshot.name}</p>
+            <p>Care home: {item.careHomeSnapshot.name}</p>
+            <Link to={hrefFor(item)} className="inline-flex font-semibold text-brand-600">View</Link>
           </article>
           );
         })}

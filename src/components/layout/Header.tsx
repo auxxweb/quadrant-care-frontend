@@ -92,7 +92,9 @@ export function Header() {
         </div>
         <div className="hidden text-right sm:block">
           <p className="text-sm font-semibold">{user?.name}</p>
-          <p className="text-xs capitalize text-slate-500">{user?.role.replaceAll('_', ' ').toLowerCase()}</p>
+          <p className="text-xs capitalize text-slate-500">
+            {user?.role.replaceAll('_', ' ').toLowerCase()}
+          </p>
         </div>
         <button
           type="button"

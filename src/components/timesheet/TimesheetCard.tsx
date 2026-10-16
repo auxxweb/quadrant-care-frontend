@@ -2,8 +2,10 @@ import { Link } from 'react-router-dom';
 import type { Timesheet } from '../../types';
 import { formatDate, fileUrl } from '../../utils';
 import { StatusBadge } from '../ui';
+import { useProductivePanel } from '../../hooks/useMetricsFocus';
 
 export function TimesheetCard({ item, href }: { item: Timesheet; href: string }) {
+  const productivePanel = useProductivePanel();
   return (
     <article className="card space-y-3 p-4">
       <div className="flex items-start justify-between gap-3">
@@ -14,28 +16,37 @@ export function TimesheetCard({ item, href }: { item: Timesheet; href: string })
         </div>
         <StatusBadge status={item.status} />
       </div>
-      <div className="grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 p-3 text-sm dark:bg-slate-800/80">
-        <div>
-          <p className="text-xs text-slate-500">Shift</p>
-          <p className="font-semibold">{item.startTime} → {item.endTime}</p>
+      {productivePanel ? (
+        <div className="rounded-2xl bg-indigo-50 p-3 text-sm dark:bg-indigo-950/40">
+          <p className="text-xs text-indigo-700 dark:text-indigo-200">Hours</p>
+          <p className="font-semibold text-indigo-950 dark:text-indigo-50">
+            {item.productiveHoursDisplay ?? '0:00'}
+          </p>
         </div>
-        <div>
-          <p className="text-xs text-slate-500">Hours</p>
-          <p className="font-semibold">{item.totalHoursDisplay}</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 p-3 text-sm dark:bg-slate-800/80">
+          <div>
+            <p className="text-xs text-slate-500">Shift</p>
+            <p className="font-semibold">{item.startTime} → {item.endTime}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Hours</p>
+            <p className="font-semibold">{item.totalHoursDisplay}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Break</p>
+            <p className="font-semibold">{item.breakDuration} min</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Incharge</p>
+            <p className="font-semibold">{item.inchargeName || '—'}</p>
+          </div>
         </div>
-        <div>
-          <p className="text-xs text-slate-500">Break</p>
-          <p className="font-semibold">{item.breakDuration} min</p>
-        </div>
-        <div>
-          <p className="text-xs text-slate-500">Incharge</p>
-          <p className="font-semibold">{item.inchargeName || '—'}</p>
-        </div>
-      </div>
+      )}
       <p className="text-sm text-slate-600 dark:text-slate-300">
         {item.careHomeSnapshot.name} · {item.jobRoleSnapshot.name}
       </p>
-      {(item.careHomeSignaturePath || item.adminSignaturePath) && (
+      {!productivePanel && (item.careHomeSignaturePath || item.adminSignaturePath) && (
         <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
             {item.careHomeSignaturePath ? 'Care home admin sign' : 'Admin sign'}

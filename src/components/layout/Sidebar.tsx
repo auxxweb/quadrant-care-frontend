@@ -57,7 +57,7 @@ export function Sidebar({ role, collapsed, onCollapse, onLogout }: { role: Role;
   return (
     <aside
       className={cn(
-        'sticky top-0 hidden h-dvh shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white md:flex dark:border-slate-800 dark:bg-slate-950',
+        'hidden h-dvh shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white md:flex dark:border-slate-800 dark:bg-slate-950',
         collapsed ? 'w-[84px]' : 'w-64',
       )}
     >
@@ -71,7 +71,7 @@ export function Sidebar({ role, collapsed, onCollapse, onLogout }: { role: Role;
           <ChevronLeft className={cn('h-4 w-4 transition', collapsed && 'rotate-180')} />
         </button>
       </div>
-      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3">
+      <nav className="min-h-0 flex-1 space-y-1 overflow-hidden px-3">
         {items[role].map((item) => (
           <NavLink
             key={item.to}

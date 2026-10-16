@@ -5,21 +5,8 @@ import { fileUrl } from '../../utils';
 import { formatClockHours, formatSheetDate, sheetWeekLabel, sortTimesheets } from '../../utils/timesheetSheet';
 import { cn } from '../../utils';
 import { useAuth } from '../../store/auth';
+import { useProductivePanel } from '../../hooks/useMetricsFocus';
 import type { Timesheet } from '../../types';
-
-const COLUMNS = [
-  'SL NO',
-  'DATE',
-  'Start Time',
-  'End Time',
-  'BREAK Duration',
-  'Total Hours Worked',
-  'JOB ROLE',
-  'CARE HOME',
-  'INCHARGE',
-  'ADMIN SIGN',
-  'Remarks',
-];
 
 function displaySignPath(item: Timesheet) {
   return item.careHomeSignaturePath || item.adminSignaturePath;
@@ -43,17 +30,21 @@ export function OfficialTimesheetForm({
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const productivePanel = useProductivePanel();
   const items = sortTimesheets(entries);
   const primary = items[0];
   if (!primary) return null;
 
   const canManagerEdit = Boolean(
-    user
+    !productivePanel
+    && user
     && primary.ownerRole !== 'ADMIN'
     && (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN'),
   );
 
   const totalMinutes = items.reduce((sum, item) => sum + (item.totalMinutes || 0), 0);
+  const totalProductiveMinutes = items.reduce((sum, item) => sum + (item.productiveMinutes || 0), 0);
+  const hoursTotal = productivePanel ? totalProductiveMinutes : totalMinutes;
   const supervisor = items.find((item) => item.inchargeName)?.inchargeName;
   const careHome = items.find((item) => item.careHomeSnapshot?.name)?.careHomeSnapshot.name;
   const signed = items.find((item) => displaySignPath(item));
@@ -64,10 +55,29 @@ export function OfficialTimesheetForm({
   const rejection = items.find((item) => item.rejectionReason)?.rejectionReason;
   const statusMeta = STATUS_META[primary.status as TimesheetStatus];
   const isAdminSheet = primary.ownerRole === 'ADMIN';
-  const columns = [
-    ...(isAdminSheet ? COLUMNS.filter((heading) => heading !== 'JOB ROLE') : COLUMNS),
-    ...(canManagerEdit ? [''] : []),
-  ];
+  const columns = productivePanel
+    ? [
+        'SL NO',
+        'DATE',
+        'Total Hours',
+        ...(isAdminSheet ? [] : ['JOB ROLE']),
+        'CARE HOME',
+        'Remarks',
+      ]
+    : [
+        'SL NO',
+        'DATE',
+        'Start Time',
+        'End Time',
+        'BREAK Duration',
+        'Total Hours Worked',
+        ...(isAdminSheet ? [] : ['JOB ROLE']),
+        'CARE HOME',
+        'INCHARGE',
+        'ADMIN SIGN',
+        'Remarks',
+        ...(canManagerEdit ? [''] : []),
+      ];
   const showApprovals = showReviewDetails && Boolean(
     signed || adminName || adminRemarks || superName || superRemarks || rejection,
   );
@@ -124,7 +134,7 @@ export function OfficialTimesheetForm({
             <dd className="font-semibold">{careHome}</dd>
           </div>
         )}
-        {supervisor && (
+        {!productivePanel && supervisor && (
           <div className="flex gap-2 border-b border-dotted border-slate-400 pb-1">
             <dt className="shrink-0 font-semibold uppercase text-slate-500">Supervisor</dt>
             <dd className="font-semibold">{supervisor}</dd>
@@ -158,20 +168,32 @@ export function OfficialTimesheetForm({
                 >
                   <td className="border border-slate-400 px-2 py-2 text-center">{index + 1}</td>
                   <td className="border border-slate-400 px-2 py-2">{formatSheetDate(item.date)}</td>
-                  <td className="border border-slate-400 px-2 py-2">{item.startTime}</td>
-                  <td className="border border-slate-400 px-2 py-2">{item.endTime}</td>
-                  <td className="border border-slate-400 px-2 py-2">{item.breakDuration}</td>
-                  <td className="border border-slate-400 px-2 py-2">{item.totalHoursDisplay}</td>
+                  {productivePanel ? (
+                    <td className="border border-slate-400 px-2 py-2">
+                      {item.productiveHoursDisplay ?? formatClockHours(item.productiveMinutes || 0)}
+                    </td>
+                  ) : (
+                    <>
+                      <td className="border border-slate-400 px-2 py-2">{item.startTime}</td>
+                      <td className="border border-slate-400 px-2 py-2">{item.endTime}</td>
+                      <td className="border border-slate-400 px-2 py-2">{item.breakDuration}</td>
+                      <td className="border border-slate-400 px-2 py-2">{item.totalHoursDisplay}</td>
+                    </>
+                  )}
                   {!isAdminSheet && <td className="border border-slate-400 px-2 py-2">{item.jobRoleSnapshot?.name || ''}</td>}
                   <td className="border border-slate-400 px-2 py-2">{item.careHomeSnapshot?.name || ''}</td>
-                  <td className="border border-slate-400 px-2 py-2">{item.inchargeName || ''}</td>
-                  <td className="border border-slate-400 px-2 py-1">
-                    {displaySignPath(item) ? (
-                      <img src={fileUrl(displaySignPath(item))} alt="Admin signature" className="h-8 max-w-[120px] object-contain" />
-                    ) : (
-                      ''
-                    )}
-                  </td>
+                  {!productivePanel && (
+                    <>
+                      <td className="border border-slate-400 px-2 py-2">{item.inchargeName || ''}</td>
+                      <td className="border border-slate-400 px-2 py-1">
+                        {displaySignPath(item) ? (
+                          <img src={fileUrl(displaySignPath(item))} alt="Admin signature" className="h-8 max-w-[120px] object-contain" />
+                        ) : (
+                          ''
+                        )}
+                      </td>
+                    </>
+                  )}
                   <td className="border border-slate-400 px-2 py-2">{item.remarks || ''}</td>
                   {canManagerEdit && (
                     <td className="border border-slate-400 px-2 py-2">
@@ -193,10 +215,20 @@ export function OfficialTimesheetForm({
               );
             })}
             <tr className="bg-slate-100 font-semibold">
-              <td className="border border-slate-400 px-2 py-2" colSpan={4} />
-              <td className="border border-slate-400 px-2 py-2 uppercase">Totals</td>
-              <td className="border border-slate-400 px-2 py-2">{formatClockHours(totalMinutes)}</td>
-              <td className="border border-slate-400 px-2 py-2" colSpan={isAdminSheet ? (canManagerEdit ? 5 : 4) : (canManagerEdit ? 6 : 5)} />
+              {productivePanel ? (
+                <>
+                  <td className="border border-slate-400 px-2 py-2 uppercase" colSpan={2}>Totals</td>
+                  <td className="border border-slate-400 px-2 py-2">{formatClockHours(hoursTotal)}</td>
+                  <td className="border border-slate-400 px-2 py-2" colSpan={isAdminSheet ? 2 : 3} />
+                </>
+              ) : (
+                <>
+                  <td className="border border-slate-400 px-2 py-2" colSpan={4} />
+                  <td className="border border-slate-400 px-2 py-2 uppercase">Totals</td>
+                  <td className="border border-slate-400 px-2 py-2">{formatClockHours(hoursTotal)}</td>
+                  <td className="border border-slate-400 px-2 py-2" colSpan={isAdminSheet ? (canManagerEdit ? 5 : 4) : (canManagerEdit ? 6 : 5)} />
+                </>
+              )}
             </tr>
           </tbody>
         </table>

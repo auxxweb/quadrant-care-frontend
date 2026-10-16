@@ -9,6 +9,8 @@ export interface AuthUser {
   adminId?: string;
   lastLogin?: string;
   themePreference?: 'light' | 'dark' | 'system';
+  /** SUPER_ADMIN only: which hours panel this login emphasizes. */
+  metricsFocus?: 'WORKED' | 'PRODUCTIVE';
   hasPasscode?: boolean;
   mustChangePassword?: boolean;
   signaturePath?: string;
@@ -66,6 +68,10 @@ export interface Timesheet {
   breakDuration: number;
   totalMinutes: number;
   totalHoursDisplay: string;
+  productiveMinutes?: number;
+  productiveHoursDisplay?: string;
+  productiveSource?: 'RULE' | 'MANUAL';
+  productiveNote?: string;
   inchargeName?: string;
   careHomeSignaturePath?: string;
   remarks?: string;

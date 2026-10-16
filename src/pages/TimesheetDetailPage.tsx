@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { getAccessToken } from '../api/client';
 import { timesheetApi } from '../api/services';
 import { TimesheetPreview } from '../components/timesheet/TimesheetPreview';
 import { SignaturePad } from '../components/timesheet/SignaturePad';
 import { Button, Input, Modal, Skeleton } from '../components/ui';
 import { InchargeSelect } from '../components/timesheet/InchargeSelect';
 import { useAuth } from '../store/auth';
+import { useProductivePanel } from '../hooks/useMetricsFocus';
 import { calculateShiftDuration, fileUrl } from '../utils';
+import { downloadWithToast, saveAxiosBlob } from '../utils/download';
 import type { Timesheet } from '../types';
 
 export function TimesheetDetailPage() {
@@ -21,6 +22,7 @@ export function TimesheetDetailPage() {
 
 function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
   const { user } = useAuth();
+  const productivePanel = useProductivePanel();
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [signature, setSignature] = useState('');
@@ -117,7 +119,8 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
   const ownerCanEdit = (user?.role === 'STAFF' || (user?.role === 'ADMIN' && isOwn)) && ['DRAFT', 'ADMIN_REJECTED', 'SUPER_ADMIN_REJECTED'].includes(data.status);
   const isStaffSheet = data.ownerRole !== 'ADMIN';
   const managerCanEditHours = Boolean(
-    isStaffSheet
+    !productivePanel
+    && isStaffSheet
     && user
     && (user.role === 'SUPER_ADMIN' || (user.role === 'ADMIN' && !isOwn)),
   );
@@ -157,14 +160,15 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
     }, { replace: true });
   }
 
+  const [pdfLoading, setPdfLoading] = useState(false);
+
   async function downloadPdf() {
-    const res = await fetch(timesheetApi.pdfUrl(id), { headers: { Authorization: `Bearer ${getAccessToken()}` } });
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${data.timesheetId}.pdf`;
-    a.click();
+    setPdfLoading(true);
+    await downloadWithToast(async () => {
+      const response = await timesheetApi.downloadPdf(id);
+      await saveAxiosBlob(response, `${data.timesheetId || 'timesheet'}.pdf`);
+    }, 'PDF downloaded.');
+    setPdfLoading(false);
   }
 
   return (
@@ -172,7 +176,7 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
       <TimesheetPreview item={data} />
       <div className="no-print flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Button variant="secondary" onClick={() => window.print()}>Print</Button>
-        <Button variant="secondary" onClick={downloadPdf}>Download PDF</Button>
+        <Button variant="secondary" loading={pdfLoading} onClick={downloadPdf}>Download PDF</Button>
         {managerCanEditHours && (
           <Button variant="accent" onClick={openHoursModal}>Edit hours & break</Button>
         )}

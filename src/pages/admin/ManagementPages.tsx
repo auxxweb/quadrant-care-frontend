@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { adminApi, auditApi, employeeApi, jobRoleApi, reportsApi, settingsApi } from '../../api/services';
-import { API_BASE_URL } from '../../config';
 import { Button, Card, ConfirmDialog, EmptyState, Input, Modal, PageHeader, Skeleton } from '../../components/ui';
 import { ActionButtons } from '../../components/ui/ActionButtons';
 import { ListFilters } from '../../components/filters/ListFilters';
@@ -11,9 +10,11 @@ import { OfficialTimesheetForm } from '../../components/timesheet/OfficialTimesh
 import { ScopeTabs, TimesheetScopeFilters } from '../../components/timesheet/TimesheetFilters';
 import { Link } from 'react-router-dom';
 import { formatDateTime, formatMinutes } from '../../utils';
+import { downloadWithToast, saveAxiosBlob } from '../../utils/download';
 import { timesheetBrowsePath } from '../../utils/timesheetLinks';
 import { groupTimesheetsByEmployee } from '../../utils/timesheetSheet';
 import { useAuth } from '../../store/auth';
+import { useProductivePanel } from '../../hooks/useMetricsFocus';
 import { useState } from 'react';
 import { ChangeCredentialsForm } from '../../components/auth/ChangeCredentialsForm';
 import { SavedSignatureForm } from '../../components/auth/SavedSignatureForm';
@@ -241,6 +242,7 @@ export function AuditLogsPage() {
 
 export function ReportsPage() {
   const { user } = useAuth();
+  const productivePanel = useProductivePanel();
   const { params, search, range, from, to, dates, update } = useListFilters();
   const defaultTab = user?.role === 'ADMIN' ? 'employees' : 'staff';
   const tab = params.get('tab') ?? defaultTab;
@@ -261,7 +263,7 @@ export function ReportsPage() {
   };
   const { data, isLoading } = useQuery({
     queryKey: ['report-timesheets', query],
-    queryFn: () => reportsApi.timesheets(query) as Promise<{ items: Timesheet[]; totalMinutes: number }>,
+    queryFn: () => reportsApi.timesheets(query) as Promise<{ items: Timesheet[]; totalMinutes: number; totalProductiveMinutes?: number }>,
   });
   const employees = useQuery({
     queryKey: ['employees', 'dropdown'],
@@ -278,19 +280,56 @@ export function ReportsPage() {
     queryFn: () => jobRoleApi.list({ status: 'ACTIVE' }),
   });
   const items = data?.items ?? [];
-  const csvParams = new URLSearchParams();
-  Object.entries(query).forEach(([key, value]) => {
-    if (value) csvParams.set(key, String(value));
-  });
-  csvParams.set('format', 'csv');
+  const [csvLoading, setCsvLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const detailBase = user?.role === 'ADMIN' ? '/admin/timesheets' : '/super-admin/timesheets';
+  const exportQuery = {
+    search: query.search,
+    from: query.from,
+    to: query.to,
+    employeeId: query.employeeId,
+    userId: query.userId,
+    jobRoleId: query.jobRoleId,
+    ownerRole: query.ownerRole,
+  };
+
+  async function exportCsv() {
+    setCsvLoading(true);
+    await downloadWithToast(async () => {
+      const response = await reportsApi.downloadTimesheetCsv(exportQuery);
+      await saveAxiosBlob(response, 'quadrant-care-timesheets.csv');
+    }, 'CSV downloaded.');
+    setCsvLoading(false);
+  }
+
+  async function exportPdf() {
+    setPdfLoading(true);
+    await downloadWithToast(async () => {
+      const response = await reportsApi.downloadTimesheetPdf(exportQuery);
+      await saveAxiosBlob(response, 'quadrant-care-timesheets.pdf');
+    }, 'PDF downloaded.');
+    setPdfLoading(false);
+  }
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Reports"
-        subtitle={data ? `${items.length} entries · ${formatMinutes(data.totalMinutes ?? 0)}` : 'Search and filter timesheet records'}
-        actions={<a href={`${API_BASE_URL}/reports/timesheets?${csvParams.toString()}`}><Button variant="secondary">Export CSV</Button></a>}
+        subtitle={
+          data
+            ? `${items.length} entries · ${formatMinutes(productivePanel ? (data.totalProductiveMinutes ?? 0) : (data.totalMinutes ?? 0))}`
+            : 'Search and filter timesheet records'
+        }
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" loading={pdfLoading} disabled={!items.length} onClick={exportPdf}>
+              Download PDF
+            </Button>
+            <Button variant="secondary" loading={csvLoading} disabled={!items.length} onClick={exportCsv}>
+              Export CSV
+            </Button>
+          </div>
+        }
       />
       {user?.role === 'ADMIN' && (
         <ScopeTabs

@@ -38,9 +38,20 @@ api.interceptors.response.use(
         return api(original);
       }
     }
-    const message = error.response?.data?.message ?? 'Something went wrong. Please try again.';
+    let message = 'Something went wrong. Please try again.';
+    const data = error.response?.data;
+    if (data instanceof Blob) {
+      try {
+        const parsed = JSON.parse(await data.text()) as { message?: string };
+        message = parsed.message ?? message;
+      } catch {
+        message = error.response?.status === 401 ? 'Please sign in again.' : message;
+      }
+    } else if (data && typeof data === 'object' && 'message' in data) {
+      message = String((data as { message?: string }).message ?? message);
+    }
     if (!original?.skipToast) toast.error(message);
-    return Promise.reject(error);
+    return Promise.reject(Object.assign(error, { message }));
   },
 );
 

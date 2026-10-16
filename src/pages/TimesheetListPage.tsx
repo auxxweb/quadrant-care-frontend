@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { adminApi, employeeApi, jobRoleApi, timesheetApi } from '../api/services';
@@ -7,6 +8,7 @@ import { ScopeTabs, TimesheetScopeFilters } from '../components/timesheet/Timesh
 import { ListFilters } from '../components/filters/ListFilters';
 import { useListFilters } from '../hooks/useListFilters';
 import { useAuth } from '../store/auth';
+import { downloadWithToast, saveAxiosBlob } from '../utils/download';
 import { timesheetNewPath } from '../utils/timesheetLinks';
 import { groupTimesheetsByEmployee } from '../utils/timesheetSheet';
 
@@ -103,6 +105,37 @@ export function TimesheetListPage({
   const sheets = groupTimesheetsByEmployee(items);
   const pageTitle =
     tab === 'mine' ? 'My Timesheets' : tab === 'employees' ? 'Employee Timesheets' : tab === 'admins' ? 'Admin Timesheets' : tab === 'staff' ? 'Staff Timesheets' : title;
+  const [csvLoading, setCsvLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const exportParams = {
+    status: status || undefined,
+    search: search || undefined,
+    from: dates.from,
+    to: dates.to,
+    employeeId: listEmployeeId,
+    userId: listUserId,
+    jobRoleId: jobRoleId || undefined,
+    ownerRole,
+  };
+
+  async function exportCsv() {
+    setCsvLoading(true);
+    await downloadWithToast(async () => {
+      const response = await timesheetApi.downloadExport(exportParams, 'csv');
+      await saveAxiosBlob(response, 'quadrant-care-timesheets.csv');
+    }, 'CSV downloaded.');
+    setCsvLoading(false);
+  }
+
+  async function exportPdf() {
+    setPdfLoading(true);
+    await downloadWithToast(async () => {
+      const response = await timesheetApi.downloadExport(exportParams, 'pdf');
+      await saveAxiosBlob(response, 'quadrant-care-timesheets.pdf');
+    }, 'PDF downloaded.');
+    setPdfLoading(false);
+  }
 
   return (
     <div>
@@ -110,9 +143,17 @@ export function TimesheetListPage({
         title={pageTitle}
         subtitle={data ? `${data.total} ${data.total === 1 ? 'entry' : 'entries'} · ${sheets.length} sheet${sheets.length === 1 ? '' : 's'}` : undefined}
         actions={
-          canAdd ? (
-            <Link to={timesheetNewPath(user?.role)}><Button variant="accent">Add timesheet</Button></Link>
-          ) : null
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" loading={pdfLoading} disabled={!items.length} onClick={exportPdf}>
+              Download PDF
+            </Button>
+            <Button variant="secondary" loading={csvLoading} disabled={!items.length} onClick={exportCsv}>
+              Export CSV
+            </Button>
+            {canAdd ? (
+              <Link to={timesheetNewPath(user?.role)}><Button variant="accent">Add timesheet</Button></Link>
+            ) : null}
+          </div>
         }
       />
       {!hideScopeTabs && user?.role === 'ADMIN' && (

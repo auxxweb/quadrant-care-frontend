@@ -75,6 +75,14 @@ export const timesheetApi = {
   approve: (id: string, payload?: object) => api.post(`/timesheets/${id}/super-admin-approve`, payload ?? {}).then((r) => r.data),
   reject: (id: string, payload: object) => api.post(`/timesheets/${id}/super-admin-reject`, payload).then((r) => r.data),
   pdfUrl: (id: string) => `${API_BASE_URL}/timesheets/${id}/pdf`,
+  downloadPdf: (id: string) =>
+    api.get(`/timesheets/${id}/pdf`, { responseType: 'blob', skipToast: true } as never),
+  downloadExport: (params: Record<string, string | undefined>, format: 'csv' | 'pdf') =>
+    api.get('/timesheets/export', {
+      params: { ...params, format },
+      responseType: 'blob',
+      skipToast: true,
+    } as never),
   weekly: (params?: object) => api.get('/timesheets/summary/weekly', { params }).then((r) => r.data),
   monthly: (params?: object) => api.get('/timesheets/summary/monthly', { params }).then((r) => r.data),
 };
@@ -89,6 +97,8 @@ export const dashboardApi = {
           pending: number;
           approved: number;
           monthMinutes: number;
+          weekProductiveMinutes?: number;
+          monthProductiveMinutes?: number;
           weekly: { date: string; shifts: number; hours: number }[];
           statusMix: { approved: number; pending: number; rejected: number; draft: number };
         },
@@ -119,10 +129,12 @@ export const dashboardApi = {
           pendingApprovals: number;
           approvedMonth: number;
           monthMinutes: number;
+          monthProductiveMinutes?: number;
           weekly: { date: string; count: number }[];
           approvedVsRejected: { approved: number; rejected: number; pending: number };
-          careHomeHours: { _id: string; minutes: number }[];
-          topEmployees: { _id: string; minutes: number }[];
+          careHomeHours: { _id: string; minutes: number; productiveMinutes?: number }[];
+          topEmployees: { _id: string; minutes: number; productiveMinutes?: number }[];
+          topProductiveEmployees?: { _id: string; minutes: number; workedMinutes?: number }[];
         },
     ),
 };
@@ -132,6 +144,26 @@ export const reportsApi = {
   hours: (params?: object) => api.get('/reports/hours', { params }).then((r) => r.data),
   careHomes: (params?: object) => api.get('/reports/care-homes', { params }).then((r) => r.data),
   csvUrl: (params: URLSearchParams) => `${API_BASE_URL}/reports/timesheets?${params.toString()}&format=csv`,
+  downloadTimesheetCsv: (params: Record<string, string | undefined> | URLSearchParams) => {
+    const query = params instanceof URLSearchParams
+      ? Object.fromEntries(params.entries())
+      : params;
+    return api.get('/reports/timesheets', {
+      params: { ...query, format: 'csv' },
+      responseType: 'blob',
+      skipToast: true,
+    } as never);
+  },
+  downloadTimesheetPdf: (params: Record<string, string | undefined> | URLSearchParams) => {
+    const query = params instanceof URLSearchParams
+      ? Object.fromEntries(params.entries())
+      : params;
+    return api.get('/reports/timesheets', {
+      params: { ...query, format: 'pdf' },
+      responseType: 'blob',
+      skipToast: true,
+    } as never);
+  },
 };
 
 export const settingsApi = {
