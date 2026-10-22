@@ -8,7 +8,6 @@ import { toast } from 'sonner';
 import { adminApi, timesheetApi } from '../../api/services';
 import { useAuth } from '../../store/auth';
 import { Button, Input, PageHeader, Select } from '../../components/ui';
-import { InchargeSelect } from '../../components/timesheet/InchargeSelect';
 import { CareHomeSelect } from '../../components/timesheet/CareHomeSelect';
 import { SignaturePad } from '../../components/timesheet/SignaturePad';
 import { calculateShiftDuration, employeeJobRoles, employeePrimaryJobRole, toInputDate } from '../../utils';
@@ -128,7 +127,7 @@ export function NewTimesheetPage() {
         {isAdmin ? (
           <Input label="Incharge / supervisor" value={superAdminName} readOnly />
         ) : (
-          <InchargeSelect {...form.register('inchargeName')} error={form.formState.errors.inchargeName?.message} />
+          <Input label="Incharge / supervisor" {...form.register('inchargeName')} error={form.formState.errors.inchargeName?.message} />
         )}
         {!isAdmin && (
           <div className="space-y-2">

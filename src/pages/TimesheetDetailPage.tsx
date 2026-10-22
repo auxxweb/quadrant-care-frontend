@@ -6,7 +6,6 @@ import { timesheetApi } from '../api/services';
 import { TimesheetPreview } from '../components/timesheet/TimesheetPreview';
 import { SignaturePad } from '../components/timesheet/SignaturePad';
 import { Button, Input, Modal, Skeleton } from '../components/ui';
-import { InchargeSelect } from '../components/timesheet/InchargeSelect';
 import { useAuth } from '../store/auth';
 import { useProductivePanel } from '../hooks/useMetricsFocus';
 import { calculateShiftDuration, fileUrl } from '../utils';
@@ -196,7 +195,7 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
           {data.ownerRole === 'ADMIN' ? (
             <Input label="Incharge / supervisor" value={edit.inchargeName || 'Super Admin'} readOnly />
           ) : (
-            <InchargeSelect value={edit.inchargeName} onChange={(e) => setEdit((v) => ({ ...v, inchargeName: e.target.value }))} />
+            <Input label="Incharge / supervisor" value={edit.inchargeName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdit((v) => ({ ...v, inchargeName: e.target.value }))} />
           )}
           <Input label="Remarks" value={edit.remarks} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdit((v) => ({ ...v, remarks: e.target.value }))} />
           <Button variant="accent" className="w-full" loading={saveCorrection.isPending} onClick={() => saveCorrection.mutate()}>Resubmit timesheet</Button>
