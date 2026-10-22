@@ -7,12 +7,16 @@ export function JobRoleMultiSelect({
   primaryId,
   onChange,
   error,
+  label = 'Job roles',
+  hint = 'Select every role this employee can work. Mark one as primary for lists and the default timesheet role.',
 }: {
   roles: JobRole[];
   assignedIds: string[];
   primaryId: string;
   onChange: (assignedIds: string[], primaryId: string) => void;
   error?: string;
+  label?: string;
+  hint?: string;
 }) {
   const assigned = new Set(assignedIds);
 
@@ -31,7 +35,7 @@ export function JobRoleMultiSelect({
 
   return (
     <div className="block space-y-1.5">
-      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Job roles</span>
+      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{label}</span>
       {assignedIds.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {assignedIds.map((id) => {
@@ -94,7 +98,7 @@ export function JobRoleMultiSelect({
         })}
         {!roles.length && <p className="px-3 py-4 text-sm text-slate-500">No job roles available.</p>}
       </div>
-      <p className="text-xs text-slate-500">Select every role this employee can work. Mark one as primary for lists and the default timesheet role.</p>
+      <p className="text-xs text-slate-500">{hint}</p>
       {error && <span className="text-xs text-red-600">{error}</span>}
     </div>
   );

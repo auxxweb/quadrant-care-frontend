@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Eye, EyeOff, KeyRound, Mail, Phone, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { authApi } from '../api/services';
+import { JobRoleMultiSelect } from '../components/employees/JobRoleMultiSelect';
 import { useAuth } from '../store/auth';
 import { Button } from '../components/ui';
 import { AuthField, authControlClass } from '../components/auth/AuthShell';
 import { cn } from '../utils';
+import type { JobRole } from '../types';
 
 function todayIso() {
   const now = new Date();
@@ -19,7 +21,9 @@ export function StaffSignupForm({ onBack }: { onBack: () => void }) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
-  const [jobRoleId, setJobRoleId] = useState('');
+  const [jobRoleIds, setJobRoleIds] = useState<string[]>([]);
+  const [primaryJobRoleId, setPrimaryJobRoleId] = useState('');
+  const [jobRoleError, setJobRoleError] = useState('');
   const [careHomeId, setCareHomeId] = useState('');
   const [joiningDate, setJoiningDate] = useState(todayIso());
   const [password, setPassword] = useState('');
@@ -37,6 +41,11 @@ export function StaffSignupForm({ onBack }: { onBack: () => void }) {
     authApi.signupOptions().then(setOptions).catch(() => setOptions({ staffSignupEnabled: false, jobRoles: [], careHomes: [] }));
   }, []);
 
+  const pickerRoles = useMemo<JobRole[]>(
+    () => (options?.jobRoles ?? []).map((role) => ({ ...role, status: 'ACTIVE' as const })),
+    [options?.jobRoles],
+  );
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (loading) return;
@@ -48,6 +57,11 @@ export function StaffSignupForm({ onBack }: { onBack: () => void }) {
       toast.error('Passcode must be 5 digits, or leave it blank.');
       return;
     }
+    if (!jobRoleIds.length) {
+      setJobRoleError('Select at least one job role.');
+      return;
+    }
+    setJobRoleError('');
     setLoading(true);
     try {
       await signup({
@@ -55,7 +69,8 @@ export function StaffSignupForm({ onBack }: { onBack: () => void }) {
         email: email.trim(),
         mobile: mobile.trim(),
         password,
-        jobRoleId,
+        jobRoleIds,
+        primaryJobRoleId: primaryJobRoleId || jobRoleIds[0],
         careHomeId,
         joiningDate,
         passcode: passcode || undefined,
@@ -97,14 +112,19 @@ export function StaffSignupForm({ onBack }: { onBack: () => void }) {
           <input id="signup-mobile" value={mobile} onChange={(e) => setMobile(e.target.value)} required autoComplete="tel" placeholder="07..." className={cn(authControlClass, 'pl-11')} />
         </div>
       </AuthField>
-      <AuthField label="Job role" htmlFor="signup-role">
-        <select id="signup-role" value={jobRoleId} onChange={(e) => setJobRoleId(e.target.value)} required className={authControlClass}>
-          <option value="">{options ? 'Select job role' : 'Loading roles…'}</option>
-          {(options?.jobRoles ?? []).map((role) => (
-            <option key={role._id} value={role._id}>{role.name}</option>
-          ))}
-        </select>
-      </AuthField>
+      <JobRoleMultiSelect
+        roles={pickerRoles}
+        assignedIds={jobRoleIds}
+        primaryId={primaryJobRoleId}
+        error={jobRoleError}
+        label="Job roles"
+        hint="Select every role you can work. Mark one as primary for lists and the default timesheet role."
+        onChange={(nextIds, nextPrimary) => {
+          setJobRoleIds(nextIds);
+          setPrimaryJobRoleId(nextPrimary);
+          setJobRoleError(nextIds.length ? '' : 'Select at least one job role.');
+        }}
+      />
       <AuthField label="Care home" htmlFor="signup-home">
         <select id="signup-home" value={careHomeId} onChange={(e) => setCareHomeId(e.target.value)} required className={authControlClass}>
           <option value="">{options ? 'Select care home' : 'Loading care homes…'}</option>

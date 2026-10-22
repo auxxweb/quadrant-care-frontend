@@ -12,7 +12,8 @@ export interface AuthState {
     email: string;
     mobile: string;
     password: string;
-    jobRoleId: string;
+    jobRoleIds: string[];
+    primaryJobRoleId?: string;
     careHomeId: string;
     joiningDate?: string;
     passcode?: string;
