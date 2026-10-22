@@ -1,5 +1,5 @@
 import { useAuth } from '../store/auth';
-import { Card, PageHeader } from '../components/ui';
+import { Card, PageHeader, RecordStatusPill } from '../components/ui';
 import { ChangeCredentialsForm } from '../components/auth/ChangeCredentialsForm';
 import { PwaInstallButton } from '../pwa/PwaInstallButton';
 import { fileUrl, formatDate, formatEmployeeJobRoles } from '../utils';
@@ -21,7 +21,7 @@ export function ProfilePage() {
         <Card className="space-y-2 text-sm">
           <p><span className="text-slate-500">Job role:</span> {formatEmployeeJobRoles(employee)}</p>
           <p><span className="text-slate-500">Joined:</span> {formatDate(employee.joiningDate)}</p>
-          <p><span className="text-slate-500">Status:</span> {employee.status}</p>
+          <div className="flex items-center gap-2"><span className="text-slate-500">Status:</span> <RecordStatusPill status={employee.status} /></div>
         </Card>
       )}
       {user?.role === 'STAFF' && <ChangeCredentialsForm />}

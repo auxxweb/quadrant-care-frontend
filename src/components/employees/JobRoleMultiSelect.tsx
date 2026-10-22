@@ -47,7 +47,7 @@ export function JobRoleMultiSelect({
                     : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
                 )}
               >
-                {role?.name ?? id}
+                {role?.name || '—'}
                 {isPrimary ? (
                   <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] uppercase tracking-wide">Primary</span>
                 ) : (

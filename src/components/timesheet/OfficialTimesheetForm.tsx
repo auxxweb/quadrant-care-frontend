@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { BrandLogo } from '../brand/BrandLogo';
 import { COMPANY_DETAILS, STATUS_META, type TimesheetStatus } from '../../constants';
-import { fileUrl } from '../../utils';
+import { displayName, fileUrl } from '../../utils';
 import { formatClockHours, formatSheetDate, sheetWeekLabel, sortTimesheets } from '../../utils/timesheetSheet';
 import { cn } from '../../utils';
 import { useAuth } from '../../store/auth';
@@ -14,7 +14,7 @@ function displaySignPath(item: Timesheet) {
 
 function personName(value?: { name?: string } | string) {
   if (!value) return '';
-  return typeof value === 'string' ? value : value.name ?? '';
+  return typeof value === 'string' ? displayName(value) : displayName(value.name);
 }
 
 export function OfficialTimesheetForm({

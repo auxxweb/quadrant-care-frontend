@@ -1,6 +1,7 @@
 import { forwardRef, type SelectHTMLAttributes } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '../../api/services';
+import { formatOptionLabel } from '../../utils';
 import { Select } from '../ui';
 
 type InchargeSelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
@@ -28,7 +29,7 @@ export const InchargeSelect = forwardRef<HTMLSelectElement, InchargeSelectProps>
       ))}
       {items.map((admin) => (
         <option key={admin.id} value={admin.name}>
-          {admin.name}{admin.adminId ? ` · ${admin.adminId}` : ''}
+          {formatOptionLabel(admin.name, admin.adminId)}
         </option>
       ))}
     </Select>

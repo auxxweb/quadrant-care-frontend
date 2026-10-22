@@ -3,11 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { jobRoleApi } from '../../api/services';
-import { Button, Card, ConfirmDialog, EmptyState, Input, Modal, PageHeader, Skeleton } from '../../components/ui';
+import { Button, Card, ConfirmDialog, EmptyState, Input, Modal, PageHeader, RecordStatusPill, Skeleton } from '../../components/ui';
 import { ActionButtons } from '../../components/ui/ActionButtons';
 import { ListFilters } from '../../components/filters/ListFilters';
 import { useListFilters } from '../../hooks/useListFilters';
-import { cn } from '../../utils';
 import type { JobRole } from '../../types';
 
 type JobRoleFormValues = {
@@ -159,7 +158,7 @@ export function JobRolesPage() {
                 <p className="font-semibold">{item.name}</p>
                 <p className="mt-1 text-sm text-slate-500">{item.description || 'No description'}</p>
               </div>
-              <StatusPill status={item.status} />
+              <RecordStatusPill status={item.status} />
             </div>
             <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
               <ActionButtons
@@ -189,7 +188,7 @@ export function JobRolesPage() {
                 <tr key={item._id} className="border-t border-slate-100 dark:border-slate-800">
                   <td className="px-4 py-3 font-medium">{item.name}</td>
                   <td className="px-4 py-3 text-slate-500">{item.description || '—'}</td>
-                  <td className="px-4 py-3"><StatusPill status={item.status} /></td>
+                  <td className="px-4 py-3"><RecordStatusPill status={item.status} /></td>
                   <td className="px-4 py-3">
                     <ActionButtons
                       actions={[
@@ -213,7 +212,7 @@ export function JobRolesPage() {
             <Detail label="Description" value={viewing.description} />
             <div>
               <dt className="text-slate-500">Status</dt>
-              <dd className="mt-1"><StatusPill status={viewing.status} /></dd>
+              <dd className="mt-1"><RecordStatusPill status={viewing.status} /></dd>
             </div>
             <div className="mt-2 flex gap-3">
               <Button variant="secondary" className="flex-1" onClick={() => { setViewing(null); startEdit(viewing); }}>Edit</Button>
@@ -233,14 +232,6 @@ export function JobRolesPage() {
         onConfirm={() => deleting && remove.mutate(deleting._id)}
       />
     </div>
-  );
-}
-
-function StatusPill({ status }: { status: string }) {
-  return (
-    <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold', status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600')}>
-      {status}
-    </span>
   );
 }
 

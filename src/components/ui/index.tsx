@@ -6,7 +6,7 @@ import {
   useEffect,
   useState,
 } from 'react';
-import { cn } from '../../utils';
+import { cn, formatRecordStatus } from '../../utils';
 import { STATUS_META, type TimesheetStatus } from '../../constants';
 
 export function Button({
@@ -84,6 +84,18 @@ export function StatCard({
 export function StatusBadge({ status }: { status: string }) {
   const meta = STATUS_META[status as TimesheetStatus] ?? { label: status.replaceAll('_', ' '), className: 'bg-slate-100 text-slate-700' };
   return <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold', meta.className)}>{meta.label}</span>;
+}
+
+export function RecordStatusPill({ status }: { status: string }) {
+  const active = status === 'ACTIVE';
+  return (
+    <span className={cn(
+      'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold',
+      active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+    )}>
+      {formatRecordStatus(status)}
+    </span>
+  );
 }
 
 export function EmptyState({ title, description, action }: { title: string; description: string; action?: ReactNode }) {

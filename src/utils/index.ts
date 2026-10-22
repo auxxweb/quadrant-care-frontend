@@ -73,6 +73,13 @@ export function fileUrl(path?: string) {
 }
 
 export {
+  displayName,
+  formatOptionLabel,
+  formatRecordStatus,
+  looksLikeObjectId,
+} from './labels';
+
+export {
   employeeJobRoles,
   employeePrimaryJobRole,
   formatEmployeeJobRoles,

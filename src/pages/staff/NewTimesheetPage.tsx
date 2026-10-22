@@ -117,7 +117,9 @@ export function NewTimesheetPage() {
         {!isAdmin && assignedRoles.length > 1 && (
           <Select label="Job role" {...form.register('jobRoleId', { required: true })} value={watch.jobRoleId ?? ''} error={form.formState.errors.jobRoleId?.message}>
             {assignedRoles.map((role) => (
-              <option key={role._id} value={role._id}>{role.name}{role._id === primaryRole?._id ? ' (primary)' : ''}</option>
+              <option key={role._id} value={role._id}>
+                {role._id === primaryRole?._id ? `${role.name} (primary)` : role.name}
+              </option>
             ))}
           </Select>
         )}

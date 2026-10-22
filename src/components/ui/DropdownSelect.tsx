@@ -1,7 +1,5 @@
 import {
-  Children,
   forwardRef,
-  isValidElement,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -13,22 +11,9 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../../utils';
+import { readOptions } from './dropdownOptions';
 
 type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & { label?: string; error?: string; children: ReactNode };
-
-function readOptions(children: ReactNode) {
-  const options: { value: string; label: string; disabled?: boolean }[] = [];
-  Children.forEach(children, (child) => {
-    if (!isValidElement(child) || child.type !== 'option') return;
-    const props = child.props as { value?: string | number; children?: ReactNode; disabled?: boolean };
-    options.push({
-      value: String(props.value ?? ''),
-      label: typeof props.children === 'string' || typeof props.children === 'number' ? String(props.children) : String(props.value ?? ''),
-      disabled: props.disabled,
-    });
-  });
-  return options;
-}
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
   { label, error, children, className, ...props },

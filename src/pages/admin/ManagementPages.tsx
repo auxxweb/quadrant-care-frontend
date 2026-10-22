@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { adminApi, auditApi, employeeApi, jobRoleApi, reportsApi, settingsApi } from '../../api/services';
-import { Button, Card, ConfirmDialog, EmptyState, Input, Modal, PageHeader, Skeleton } from '../../components/ui';
+import { Button, Card, ConfirmDialog, EmptyState, Input, Modal, PageHeader, RecordStatusPill, Skeleton } from '../../components/ui';
 import { ActionButtons } from '../../components/ui/ActionButtons';
 import { ListFilters } from '../../components/filters/ListFilters';
 import { useListFilters } from '../../hooks/useListFilters';
@@ -101,7 +101,7 @@ export function AdminUsersPage() {
                 <p className="font-semibold">{item.name}</p>
                 <p className="break-all text-sm text-slate-500">{item.adminId} · {item.email}</p>
               </div>
-              <span className="shrink-0 text-xs font-medium text-slate-500">{item.status}</span>
+              <RecordStatusPill status={item.status} />
             </div>
             <div className="border-t border-slate-100 pt-3 dark:border-slate-800">
               <ActionButtons actions={adminActions(item)} />

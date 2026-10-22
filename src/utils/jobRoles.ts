@@ -1,4 +1,5 @@
 import type { Employee, JobRole } from '../types';
+import { displayName } from './labels';
 
 export function jobRoleId(role: JobRole | string | undefined): string {
   if (!role) return '';
@@ -7,7 +8,7 @@ export function jobRoleId(role: JobRole | string | undefined): string {
 
 export function jobRoleName(role: JobRole | string | undefined): string {
   if (!role) return '';
-  return typeof role === 'string' ? role : role.name;
+  return typeof role === 'string' ? displayName(role) : displayName(role.name);
 }
 
 export function employeeJobRoles(employee?: Pick<Employee, 'jobRoleIds'> | null): JobRole[] {

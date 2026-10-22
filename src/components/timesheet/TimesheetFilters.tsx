@@ -1,4 +1,4 @@
-import { cn } from '../../utils';
+import { cn, formatOptionLabel } from '../../utils';
 import { Select } from '../ui';
 import type { AuthUser, Employee, JobRole } from '../../types';
 
@@ -65,7 +65,7 @@ export function TimesheetScopeFilters({
           <option value="">All employees</option>
           {employees?.map((item) => (
             <option key={item._id} value={item._id}>
-              {item.fullName} · {item.employeeId}
+              {formatOptionLabel(item.fullName, item.employeeId)}
             </option>
           ))}
         </Select>
@@ -75,7 +75,7 @@ export function TimesheetScopeFilters({
           <option value="">All admins</option>
           {admins?.map((item) => (
             <option key={item.id} value={item.id}>
-              {item.name}{item.adminId ? ` · ${item.adminId}` : ''}
+              {formatOptionLabel(item.name, item.adminId)}
             </option>
           ))}
         </Select>

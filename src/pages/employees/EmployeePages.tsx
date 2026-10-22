@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { employeeApi, jobRoleApi } from '../../api/services';
-import { Button, Card, ConfirmDialog, EmptyState, Input, PageHeader, Skeleton } from '../../components/ui';
+import { Button, Card, ConfirmDialog, EmptyState, Input, PageHeader, RecordStatusPill, Skeleton } from '../../components/ui';
 import { ActionButtons } from '../../components/ui/ActionButtons';
 import { JobRoleMultiSelect } from '../../components/employees/JobRoleMultiSelect';
 import { ListFilters } from '../../components/filters/ListFilters';
@@ -68,7 +68,7 @@ export function EmployeeListPage({ basePath }: { basePath: string }) {
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{item.fullName}</p>
                   <p className="text-xs text-slate-500">{item.employeeId} · {formatEmployeeJobRoles(item, true)}</p>
-                  <p className="text-xs text-slate-500">{item.status}</p>
+                  <div className="mt-1"><RecordStatusPill status={item.status} /></div>
                 </div>
               </div>
               <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
@@ -88,7 +88,7 @@ export function EmployeeListPage({ basePath }: { basePath: string }) {
                   <td className="px-4 py-3 font-medium">{item.fullName}</td>
                   <td className="px-4 py-3">{item.employeeId}</td>
                   <td className="px-4 py-3">{formatEmployeeJobRoles(item, true)}</td>
-                  <td className="px-4 py-3">{item.status}</td>
+                  <td className="px-4 py-3"><RecordStatusPill status={item.status} /></td>
                   <td className="px-4 py-3">
                     <ActionButtons actions={employeeActions(item)} />
                   </td>
