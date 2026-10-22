@@ -160,13 +160,67 @@ export function AdminUsersPage() {
   );
 }
 
-export function SettingsPage() {
-  const { data, isLoading } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get });
-  const form = useForm({ values: data ? { ...data, staffSignupEnabled: data.staffSignupEnabled !== false } : undefined });
+const AUTH_FLAG_KEYS = ['emailLoginEnabled', 'mobileLoginEnabled', 'passcodeLoginEnabled', 'staffSignupEnabled'] as const;
+const LOGIN_METHOD_REQUIRED = 'Enable at least one login method (email, mobile, or passcode).';
 
-  async function saveSettings(values: Record<string, unknown>) {
-    await settingsApi.update(values);
-    toast.success('Settings saved');
+function hydrateSettings(data: Record<string, unknown>): Record<string, unknown> {
+  return { ...data, staffSignupEnabled: data.staffSignupEnabled !== false };
+}
+
+function hasLoginMethod(values: Record<string, unknown>) {
+  return Boolean(values.emailLoginEnabled) || Boolean(values.mobileLoginEnabled) || Boolean(values.passcodeLoginEnabled);
+}
+
+function authFlagsChanged(next: Record<string, unknown>, current?: Record<string, unknown>) {
+  if (!current) return true;
+  return AUTH_FLAG_KEYS.some((key) => Boolean(next[key]) !== Boolean(current[key]));
+}
+
+function disablingAuth(next: Record<string, unknown>, current?: Record<string, unknown>) {
+  if (!current) return false;
+  return AUTH_FLAG_KEYS.some((key) => Boolean(current[key]) && !Boolean(next[key]));
+}
+
+function authConfirmDescription(values: Record<string, unknown>) {
+  const state = (on: unknown) => (on ? 'on' : 'off');
+  return `This will change how people sign in. Email login: ${state(values.emailLoginEnabled)}. Mobile login: ${state(values.mobileLoginEnabled)}. Passcode login: ${state(values.passcodeLoginEnabled)}. Staff self-signup: ${state(values.staffSignupEnabled)}. People using a disabled method will not be able to sign in.`;
+}
+
+export function SettingsPage() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get });
+  const saved = data ? hydrateSettings(data as Record<string, unknown>) : undefined;
+  const form = useForm<Record<string, unknown>>({ values: saved });
+  const [pendingValues, setPendingValues] = useState<Record<string, unknown> | null>(null);
+  const [saving, setSaving] = useState(false);
+  const emailOn = form.watch('emailLoginEnabled');
+  const mobileOn = form.watch('mobileLoginEnabled');
+  const passcodeOn = form.watch('passcodeLoginEnabled');
+  const loginMethodMissing = !emailOn && !mobileOn && !passcodeOn;
+
+  async function persistSettings(values: Record<string, unknown>) {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await settingsApi.update(values);
+      toast.success('Settings saved');
+      setPendingValues(null);
+      qc.invalidateQueries({ queryKey: ['settings'] });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function saveSettings(values: Record<string, unknown>) {
+    if (!hasLoginMethod(values)) {
+      toast.error(LOGIN_METHOD_REQUIRED);
+      return;
+    }
+    if (authFlagsChanged(values, saved)) {
+      setPendingValues(values);
+      return;
+    }
+    void persistSettings(values);
   }
 
   if (isLoading) return <Skeleton className="h-80" />;
@@ -189,6 +243,7 @@ export function SettingsPage() {
           <label className="flex items-center gap-2"><input type="checkbox" {...form.register('mobileLoginEnabled')} /> Mobile login</label>
           <label className="flex items-center gap-2"><input type="checkbox" {...form.register('passcodeLoginEnabled')} /> Passcode login</label>
           <label className="flex items-center gap-2"><input type="checkbox" {...form.register('staffSignupEnabled')} /> Allow staff to sign up themselves</label>
+          {loginMethodMissing && <p className="text-sm text-red-600">{LOGIN_METHOD_REQUIRED}</p>}
         </Card>
         <Card className="space-y-3">
           <h3 className="font-semibold">Timesheet</h3>
@@ -202,8 +257,17 @@ export function SettingsPage() {
           <Input label="Max login attempts" type="number" {...form.register('maxLoginAttempts', { valueAsNumber: true })} />
           <Input label="Lockout duration (minutes)" type="number" {...form.register('lockoutDurationMinutes', { valueAsNumber: true })} />
         </Card>
-        <Button variant="accent" className="w-full">Save settings</Button>
+        <Button variant="accent" className="w-full" loading={saving}>Save settings</Button>
       </form>
+      <ConfirmDialog
+        open={Boolean(pendingValues)}
+        title="Update authentication?"
+        description={pendingValues ? authConfirmDescription(pendingValues) : ''}
+        confirmLabel="Save changes"
+        danger={Boolean(pendingValues && disablingAuth(pendingValues, saved))}
+        onClose={() => !saving && setPendingValues(null)}
+        onConfirm={() => pendingValues && persistSettings(pendingValues)}
+      />
     </div>
   );
 }
