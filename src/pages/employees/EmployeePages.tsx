@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { employeeApi, jobRoleApi } from '../../api/services';
-import { Button, Card, ConfirmDialog, EmptyState, Input, PageHeader, RecordStatusPill, Skeleton } from '../../components/ui';
+import { Button, Card, ConfirmDialog, EmptyState, Input, PageHeader, Skeleton } from '../../components/ui';
 import { ActionButtons } from '../../components/ui/ActionButtons';
 import { JobRoleMultiSelect } from '../../components/employees/JobRoleMultiSelect';
 import { ListFilters } from '../../components/filters/ListFilters';
@@ -23,12 +23,17 @@ export function EmployeeListPage({ basePath }: { basePath: string }) {
   const [target, setTarget] = useState<Employee | null>(null);
   const disable = useMutation({
     mutationFn: () => employeeApi.status(target!._id, target?.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'),
-    onSuccess: () => { toast.success('Employee status updated'); setTarget(null); qc.invalidateQueries({ queryKey: ['employees'] }); },
+    onSuccess: () => {
+      toast.success(target?.status === 'ACTIVE' ? 'Employee disabled' : 'Employee enabled');
+      setTarget(null);
+      qc.invalidateQueries({ queryKey: ['employees'] });
+    },
   });
+  const disabling = target?.status === 'ACTIVE';
+  const targetName = target?.fullName ?? 'this employee';
   const timesheetBase = basePath.includes('super-admin') ? '/super-admin/timesheets' : '/admin/timesheets';
   function employeeActions(item: Employee) {
     return [
-      { label: 'View', to: `${basePath}/${item._id}`, tone: 'view' as const },
       { label: 'Edit', to: `${basePath}/${item._id}`, tone: 'edit' as const },
       {
         label: 'Timesheet',
@@ -41,7 +46,7 @@ export function EmployeeListPage({ basePath }: { basePath: string }) {
         }),
         tone: 'timesheet' as const,
       },
-      { label: item.status === 'ACTIVE' ? 'Disable' : 'Enable', onClick: () => setTarget(item), tone: 'danger' as const },
+      { label: item.status === 'ACTIVE' ? 'Disable' : 'Enable', onClick: () => setTarget(item), tone: item.status === 'ACTIVE' ? 'danger' as const : 'success' as const },
     ];
   }
   return (
@@ -68,7 +73,6 @@ export function EmployeeListPage({ basePath }: { basePath: string }) {
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{item.fullName}</p>
                   <p className="text-xs text-slate-500">{item.employeeId} · {formatEmployeeJobRoles(item, true)}</p>
-                  <div className="mt-1"><RecordStatusPill status={item.status} /></div>
                 </div>
               </div>
               <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
@@ -80,7 +84,7 @@ export function EmployeeListPage({ basePath }: { basePath: string }) {
       </div>
       <div className="card hidden overflow-x-auto md:block">
         <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-800"><tr>{['Employee','ID','Role','Status',''].map((h)=><th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
+          <thead className="bg-slate-50 dark:bg-slate-800"><tr>{['Employee','ID','Role',''].map((h)=><th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
           <tbody>
             {data?.items.map((item) => {
               return (
@@ -88,7 +92,6 @@ export function EmployeeListPage({ basePath }: { basePath: string }) {
                   <td className="px-4 py-3 font-medium">{item.fullName}</td>
                   <td className="px-4 py-3">{item.employeeId}</td>
                   <td className="px-4 py-3">{formatEmployeeJobRoles(item, true)}</td>
-                  <td className="px-4 py-3"><RecordStatusPill status={item.status} /></td>
                   <td className="px-4 py-3">
                     <ActionButtons actions={employeeActions(item)} />
                   </td>
@@ -98,7 +101,17 @@ export function EmployeeListPage({ basePath }: { basePath: string }) {
           </tbody>
         </table>
       </div>
-      <ConfirmDialog open={Boolean(target)} title="Change employee status" description="This will enable or disable login for the selected employee." confirmLabel="Continue" danger onClose={() => setTarget(null)} onConfirm={() => disable.mutate()} />
+      <ConfirmDialog
+        open={Boolean(target)}
+        title={disabling ? `Disable ${targetName}?` : `Enable ${targetName}?`}
+        description={disabling
+          ? `${targetName} is Active. This will set them to Inactive and they will not be able to log in.`
+          : `${targetName} is Inactive. This will set them to Active and they will be able to log in again.`}
+        confirmLabel={disabling ? 'Disable' : 'Enable'}
+        danger={disabling}
+        onClose={() => setTarget(null)}
+        onConfirm={() => disable.mutate()}
+      />
     </div>
   );
 }

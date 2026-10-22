@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { cn } from '../../utils';
 
-export type ActionTone = 'view' | 'edit' | 'timesheet' | 'danger';
+export type ActionTone = 'view' | 'edit' | 'timesheet' | 'success' | 'danger';
 
 export type RowAction = {
   label: string;
@@ -14,6 +14,7 @@ const tones: Record<ActionTone, string> = {
   view: 'bg-sky-50 text-sky-700 ring-sky-200 hover:bg-sky-100 dark:bg-sky-950/40 dark:text-sky-200 dark:ring-sky-800',
   edit: 'bg-amber-50 text-amber-800 ring-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-800',
   timesheet: 'bg-brand-600 text-white ring-brand-600 hover:bg-brand-700',
+  success: 'bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200 dark:ring-emerald-800',
   danger: 'bg-rose-50 text-rose-700 ring-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-200 dark:ring-rose-800',
 };
 
@@ -30,6 +31,13 @@ function Icon({ tone }: { tone: ActionTone }) {
     return (
       <svg viewBox="0 0 20 20" fill="currentColor" className={className} aria-hidden>
         <path fillRule="evenodd" d="M6 2a1 1 0 0 0-1 1v1H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1V3a1 1 0 1 0-2 0v1H7V3a1 1 0 0 0-1-1Zm8 7H6v2h8V9Z" clipRule="evenodd" />
+      </svg>
+    );
+  }
+  if (tone === 'success') {
+    return (
+      <svg viewBox="0 0 20 20" fill="currentColor" className={className} aria-hidden>
+        <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.707-9.293a1 1 0 0 0-1.414-1.414L9 10.586 7.707 9.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4Z" clipRule="evenodd" />
       </svg>
     );
   }

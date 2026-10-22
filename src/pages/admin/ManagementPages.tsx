@@ -35,6 +35,8 @@ export function AdminUsersPage() {
   const [newPasscode, setNewPasscode] = useState('');
   const [savingLogin, setSavingLogin] = useState(false);
   const [target, setTarget] = useState<AuthUser | null>(null);
+  const disabling = target?.status === 'ACTIVE';
+  const targetName = target?.name ?? 'this admin';
   function adminActions(item: AuthUser) {
     return [
       { label: 'Edit', onClick: () => { setLoginTarget(item); setNewPassword(''); setNewPasscode(''); }, tone: 'edit' as const },
@@ -49,7 +51,7 @@ export function AdminUsersPage() {
         }),
         tone: 'timesheet' as const,
       },
-      { label: item.status === 'ACTIVE' ? 'Disable' : 'Enable', onClick: () => setTarget(item), tone: 'danger' as const },
+      { label: item.status === 'ACTIVE' ? 'Disable' : 'Enable', onClick: () => setTarget(item), tone: item.status === 'ACTIVE' ? 'danger' as const : 'success' as const },
     ];
   }
   return (
@@ -143,15 +145,17 @@ export function AdminUsersPage() {
       </Modal>
       <ConfirmDialog
         open={Boolean(target)}
-        title="Change admin status"
-        description="This will enable or disable login for the selected admin."
-        confirmLabel="Continue"
-        danger
+        title={disabling ? `Disable ${targetName}?` : `Enable ${targetName}?`}
+        description={disabling
+          ? `${targetName} is Active. This will set them to Inactive and they will not be able to log in.`
+          : `${targetName} is Inactive. This will set them to Active and they will be able to log in again.`}
+        confirmLabel={disabling ? 'Disable' : 'Enable'}
+        danger={disabling}
         onClose={() => setTarget(null)}
         onConfirm={async () => {
           if (!target) return;
           await adminApi.status(target.id, target.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE');
-          toast.success('Admin status updated');
+          toast.success(disabling ? 'Admin disabled' : 'Admin enabled');
           setTarget(null);
           qc.invalidateQueries({ queryKey: ['admins'] });
         }}
