@@ -2,12 +2,10 @@ import { useAuth } from '../store/auth';
 import { Card, PageHeader } from '../components/ui';
 import { ChangeCredentialsForm } from '../components/auth/ChangeCredentialsForm';
 import { PwaInstallButton } from '../pwa/PwaInstallButton';
-import type { JobRole } from '../types';
-import { fileUrl, formatDate } from '../utils';
+import { fileUrl, formatDate, formatEmployeeJobRoles } from '../utils';
 
 export function ProfilePage() {
   const { user, employee, logout } = useAuth();
-  const job = employee?.jobRoleId as JobRole | undefined;
   return (
     <div className="space-y-5">
       <PageHeader title="Profile" subtitle="Your Quadrant Care account" />
@@ -21,7 +19,7 @@ export function ProfilePage() {
       </Card>
       {employee && (
         <Card className="space-y-2 text-sm">
-          <p><span className="text-slate-500">Job role:</span> {job?.name}</p>
+          <p><span className="text-slate-500">Job role:</span> {formatEmployeeJobRoles(employee)}</p>
           <p><span className="text-slate-500">Joined:</span> {formatDate(employee.joiningDate)}</p>
           <p><span className="text-slate-500">Status:</span> {employee.status}</p>
         </Card>

@@ -3,13 +3,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { employeeApi, jobRoleApi } from '../../api/services';
-import { Button, Card, ConfirmDialog, EmptyState, Input, PageHeader, Select, Skeleton } from '../../components/ui';
+import { Button, Card, ConfirmDialog, EmptyState, Input, PageHeader, Skeleton } from '../../components/ui';
 import { ActionButtons } from '../../components/ui/ActionButtons';
+import { JobRoleMultiSelect } from '../../components/employees/JobRoleMultiSelect';
 import { ListFilters } from '../../components/filters/ListFilters';
 import { useListFilters } from '../../hooks/useListFilters';
-import { fileUrl } from '../../utils';
+import { fileUrl, formatEmployeeJobRoles, jobRoleId } from '../../utils';
 import { timesheetBrowsePath } from '../../utils/timesheetLinks';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Employee, JobRole } from '../../types';
 
 export function EmployeeListPage({ basePath }: { basePath: string }) {
@@ -60,14 +61,13 @@ export function EmployeeListPage({ basePath }: { basePath: string }) {
       {!isLoading && !data?.items.length && <EmptyState title="No employees found" description="Try another search or date range, or add a new employee." action={<Link to={`${basePath}/new`}><Button>Add Employee</Button></Link>} />}
       <div className="grid gap-3 md:hidden">
         {data?.items.map((item) => {
-          const job = item.jobRoleId as JobRole;
           return (
             <article key={item._id} className="card p-4">
               <div className="flex items-start gap-3">
                 {item.profilePhoto ? <img src={fileUrl(item.profilePhoto)} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover" /> : <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white">{item.fullName[0]}</div>}
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{item.fullName}</p>
-                  <p className="text-xs text-slate-500">{item.employeeId} · {job?.name}</p>
+                  <p className="text-xs text-slate-500">{item.employeeId} · {formatEmployeeJobRoles(item, true)}</p>
                   <p className="text-xs text-slate-500">{item.status}</p>
                 </div>
               </div>
@@ -83,12 +83,11 @@ export function EmployeeListPage({ basePath }: { basePath: string }) {
           <thead className="bg-slate-50 dark:bg-slate-800"><tr>{['Employee','ID','Role','Status',''].map((h)=><th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
           <tbody>
             {data?.items.map((item) => {
-              const job = item.jobRoleId as JobRole;
               return (
                 <tr key={item._id} className="border-t border-slate-100 dark:border-slate-800">
                   <td className="px-4 py-3 font-medium">{item.fullName}</td>
                   <td className="px-4 py-3">{item.employeeId}</td>
-                  <td className="px-4 py-3">{job?.name}</td>
+                  <td className="px-4 py-3">{formatEmployeeJobRoles(item, true)}</td>
                   <td className="px-4 py-3">{item.status}</td>
                   <td className="px-4 py-3">
                     <ActionButtons actions={employeeActions(item)} />
@@ -109,6 +108,9 @@ export function EmployeeFormPage({ basePath }: { basePath: string }) {
   const navigate = useNavigate();
   const roles = useQuery({ queryKey: ['job-roles', { status: 'ACTIVE' }], queryFn: () => jobRoleApi.list({ status: 'ACTIVE' }) });
   const existing = useQuery({ queryKey: ['employee', id], queryFn: () => employeeApi.get(id!), enabled: Boolean(id) });
+  const [jobRoleIds, setJobRoleIds] = useState<string[]>([]);
+  const [primaryJobRoleId, setPrimaryJobRoleId] = useState('');
+  const [jobRoleError, setJobRoleError] = useState('');
   const form = useForm({
     values: existing.data
       ? {
@@ -116,17 +118,39 @@ export function EmployeeFormPage({ basePath }: { basePath: string }) {
           email: existing.data.email,
           mobile: existing.data.mobile,
           address: existing.data.address ?? '',
-          jobRoleId: typeof existing.data.jobRoleId === 'string' ? existing.data.jobRoleId : existing.data.jobRoleId._id,
           joiningDate: existing.data.joiningDate?.slice(0, 10),
           password: '',
           passcode: '',
         }
-      : { fullName: '', email: '', mobile: '', address: '', jobRoleId: '', joiningDate: '', password: '', passcode: '' },
+      : { fullName: '', email: '', mobile: '', address: '', joiningDate: '', password: '', passcode: '' },
   });
 
+  useEffect(() => {
+    if (!existing.data) return;
+    const assigned = (existing.data.jobRoleIds ?? []).map(jobRoleId).filter(Boolean);
+    setJobRoleIds(assigned);
+    setPrimaryJobRoleId(jobRoleId(existing.data.primaryJobRoleId) || assigned[0] || '');
+  }, [existing.data]);
+
+  const pickerRoles = useMemo(() => {
+    const catalog = roles.data?.items ?? [];
+    const assigned = (existing.data?.jobRoleIds ?? []).filter((role): role is JobRole => typeof role !== 'string');
+    return [
+      ...catalog,
+      ...assigned.filter((role) => !catalog.some((item) => item._id === role._id)),
+    ];
+  }, [roles.data?.items, existing.data?.jobRoleIds]);
+
   async function onSubmit(values: Record<string, string>) {
+    if (!jobRoleIds.length) {
+      setJobRoleError('Select at least one job role.');
+      return;
+    }
+    setJobRoleError('');
     const payload = {
       ...values,
+      jobRoleIds,
+      primaryJobRoleId: primaryJobRoleId || jobRoleIds[0],
       password: values.password || undefined,
       passcode: values.passcode || undefined,
     };
@@ -151,10 +175,17 @@ export function EmployeeFormPage({ basePath }: { basePath: string }) {
       </Card>
       <Card className="space-y-3">
         <h3 className="font-semibold">Employment information</h3>
-        <Select label="Job role" {...form.register('jobRoleId', { required: true })}>
-          <option value="">Select job role</option>
-          {roles.data?.items.map((item) => <option key={item._id} value={item._id}>{item.name}</option>)}
-        </Select>
+        <JobRoleMultiSelect
+          roles={pickerRoles}
+          assignedIds={jobRoleIds}
+          primaryId={primaryJobRoleId}
+          error={jobRoleError}
+          onChange={(nextIds, nextPrimary) => {
+            setJobRoleIds(nextIds);
+            setPrimaryJobRoleId(nextPrimary);
+            setJobRoleError(nextIds.length ? '' : 'Select at least one job role.');
+          }}
+        />
         <Input label="Joining date" type="date" {...form.register('joiningDate', { required: true })} />
       </Card>
       <Card className="space-y-3">

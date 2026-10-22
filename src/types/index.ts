@@ -28,7 +28,8 @@ export interface Employee {
   joiningDate: string;
   status: 'ACTIVE' | 'INACTIVE';
   loginEnabled: boolean;
-  jobRoleId: JobRole | string;
+  jobRoleIds: Array<JobRole | string>;
+  primaryJobRoleId: JobRole | string;
   careHomeId?: CareHome | string;
 }
 

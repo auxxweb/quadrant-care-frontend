@@ -7,19 +7,19 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { adminApi, timesheetApi } from '../../api/services';
 import { useAuth } from '../../store/auth';
-import { Button, Input, PageHeader } from '../../components/ui';
+import { Button, Input, PageHeader, Select } from '../../components/ui';
 import { InchargeSelect } from '../../components/timesheet/InchargeSelect';
 import { CareHomeSelect } from '../../components/timesheet/CareHomeSelect';
 import { SignaturePad } from '../../components/timesheet/SignaturePad';
-import { calculateShiftDuration, toInputDate } from '../../utils';
+import { calculateShiftDuration, employeeJobRoles, employeePrimaryJobRole, toInputDate } from '../../utils';
 import { timesheetDetailPath } from '../../utils/timesheetLinks';
-import type { JobRole } from '../../types';
 
 const schema = z.object({
   date: z.string().min(1),
   startTime: z.string().min(1),
   endTime: z.string().min(1),
   breakDuration: z.coerce.number().min(0),
+  jobRoleId: z.string().optional(),
   careHomeId: z.string().min(1, 'Select a care home'),
   inchargeName: z.string().min(1, 'Incharge name is required'),
   remarks: z.string().optional(),
@@ -45,7 +45,8 @@ export function NewTimesheetPage() {
   const [hoursError, setHoursError] = useState('');
   const [careHomeSignature, setCareHomeSignature] = useState('');
   const isAdmin = user?.role === 'ADMIN';
-  const job = employee?.jobRoleId as JobRole | undefined;
+  const assignedRoles = employeeJobRoles(employee);
+  const primaryRole = employeePrimaryJobRole(employee);
   const directory = useQuery({
     queryKey: ['admins', 'directory'],
     queryFn: adminApi.directory,
@@ -54,12 +55,18 @@ export function NewTimesheetPage() {
   const superAdminName = directory.data?.items.find((item) => item.role === 'SUPER_ADMIN')?.name || 'Super Admin';
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { date: toInputDate(new Date()), startTime: '08:00', endTime: '20:00', breakDuration: 60, careHomeId: '', inchargeName: '' },
+    defaultValues: { date: toInputDate(new Date()), startTime: '08:00', endTime: '20:00', breakDuration: 60, jobRoleId: '', careHomeId: '', inchargeName: '' },
   });
 
   useEffect(() => {
     if (isAdmin && superAdminName) form.setValue('inchargeName', superAdminName);
   }, [isAdmin, superAdminName, form]);
+
+  useEffect(() => {
+    if (!isAdmin && primaryRole?._id && !form.getValues('jobRoleId')) {
+      form.setValue('jobRoleId', primaryRole._id);
+    }
+  }, [isAdmin, primaryRole?._id, form]);
 
   const watch = form.watch();
   useMemo(() => {
@@ -72,9 +79,17 @@ export function NewTimesheetPage() {
     }
   }, [watch.startTime, watch.endTime, watch.breakDuration]);
 
+  const selectedRole = assignedRoles.find((role) => role._id === watch.jobRoleId) ?? primaryRole;
+
   async function save(values: FormValues, submit: boolean) {
+    const jobRoleId = isAdmin ? undefined : values.jobRoleId || primaryRole?._id;
+    if (!isAdmin && !jobRoleId) {
+      toast.error('Select a job role.');
+      return;
+    }
     const created = await timesheetApi.create({
       ...values,
+      ...(jobRoleId ? { jobRoleId } : {}),
       inchargeName: isAdmin ? superAdminName : values.inchargeName,
       ...( !isAdmin && careHomeSignature ? { careHomeSignature } : {}),
       submit,
@@ -86,7 +101,7 @@ export function NewTimesheetPage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-5">
-      <PageHeader title="Add timesheet" subtitle={isAdmin ? 'Admin timesheet' : job?.name ?? 'Staff timesheet'} />
+      <PageHeader title="Add timesheet" subtitle={isAdmin ? 'Admin timesheet' : selectedRole?.name ?? 'Staff timesheet'} />
       <form className="card space-y-4 p-5" onSubmit={form.handleSubmit((v) => save(v, true))}>
         <Input label="Date" type="date" {...form.register('date')} />
         <div className="grid grid-cols-2 gap-3">
@@ -99,7 +114,14 @@ export function NewTimesheetPage() {
           <p className="text-3xl font-bold">{hours}</p>
           {hoursError && <p className="mt-2 text-sm text-red-600">{hoursError}</p>}
         </div>
-        {!isAdmin && <Input label="Job role" value={job?.name ?? ''} readOnly />}
+        {!isAdmin && assignedRoles.length > 1 && (
+          <Select label="Job role" {...form.register('jobRoleId', { required: true })} value={watch.jobRoleId ?? ''} error={form.formState.errors.jobRoleId?.message}>
+            {assignedRoles.map((role) => (
+              <option key={role._id} value={role._id}>{role.name}{role._id === primaryRole?._id ? ' (primary)' : ''}</option>
+            ))}
+          </Select>
+        )}
+        {!isAdmin && assignedRoles.length <= 1 && <Input label="Job role" value={assignedRoles[0]?.name ?? primaryRole?.name ?? ''} readOnly />}
         <CareHomeSelect {...form.register('careHomeId')} error={form.formState.errors.careHomeId?.message} />
         {isAdmin ? (
           <Input label="Incharge / supervisor" value={superAdminName} readOnly />

@@ -4,16 +4,14 @@ import { Plus } from 'lucide-react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { dashboardApi } from '../../api/services';
 import { useAuth } from '../../store/auth';
-import { firstName, formatMinutes, greeting } from '../../utils';
+import { firstName, formatEmployeeJobRoles, formatMinutes, greeting } from '../../utils';
 import { Button, Skeleton, StatCard } from '../../components/ui';
-import type { JobRole } from '../../types';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export function StaffDashboard() {
   const { employee, user } = useAuth();
   const { data, isLoading } = useQuery({ queryKey: ['staff-dashboard'], queryFn: dashboardApi.staff });
-  const job = employee?.jobRoleId as JobRole | undefined;
   if (isLoading || !data) return <div className="grid gap-3"><Skeleton className="h-40" /><Skeleton className="h-28" /><Skeleton className="h-56" /></div>;
 
   const weekly = (data.weekly ?? []).map((item, index) => ({
@@ -32,7 +30,7 @@ export function StaffDashboard() {
       <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-500 to-brand-800 p-6 text-white shadow-card">
         <p className="text-sm text-white/80">{greeting()}, {firstName(user?.name)} 👋</p>
         <h1 className="mt-1 text-3xl font-bold">{employee?.fullName ?? user?.name}</h1>
-        <p className="mt-2 text-white/80">{job?.name || 'Staff workspace'}</p>
+        <p className="mt-2 text-white/80">{formatEmployeeJobRoles(employee) || 'Staff workspace'}</p>
       </section>
       <Link to="/staff/timesheets/new" className="block">
         <Button variant="accent" className="min-h-14 w-full text-base">
