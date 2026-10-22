@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, EyeOff, KeyRound, Mail } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, Mail, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import { authApi } from '../api/services';
 import { useAuth } from '../store/auth';
@@ -12,12 +12,42 @@ import { cn } from '../utils';
 
 const REMEMBER_KEY = 'quadrant.rememberIdentifier';
 
+type LoginMode = 'password' | 'passcode';
+type AuthOptions = {
+  emailLoginEnabled: boolean;
+  mobileLoginEnabled: boolean;
+  passcodeLoginEnabled: boolean;
+  staffSignupEnabled: boolean;
+};
+
 function readRememberedIdentifier() {
   try {
     return localStorage.getItem(REMEMBER_KEY) ?? '';
   } catch {
     return '';
   }
+}
+
+function identifierCopy(options: AuthOptions, passwordForm: boolean) {
+  if (!passwordForm || (options.emailLoginEnabled && options.mobileLoginEnabled)) {
+    return {
+      label: 'Email, mobile or ID',
+      placeholder: 'e.g. name@quadrantcare.local',
+      subtitle: `Sign in to ${APP_NAME} with your work email, mobile number, or staff ID.`,
+    };
+  }
+  if (options.emailLoginEnabled) {
+    return {
+      label: 'Email',
+      placeholder: 'e.g. name@quadrantcare.local',
+      subtitle: `Sign in to ${APP_NAME} with your work email.`,
+    };
+  }
+  return {
+    label: 'Mobile or ID',
+    placeholder: 'e.g. 07111111111 or staff ID',
+    subtitle: `Sign in to ${APP_NAME} with your mobile number or staff ID.`,
+  };
 }
 
 export function LoginPage() {
@@ -28,16 +58,23 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(Boolean(remembered));
-  const [mode, setMode] = useState<'password' | 'passcode'>('password');
+  const [mode, setMode] = useState<LoginMode>('password');
   const [passcode, setPasscode] = useState('');
   const [loading, setLoading] = useState(false);
   const [panel, setPanel] = useState<'signin' | 'signup'>('signin');
-  const [options, setOptions] = useState({
+  const [options, setOptions] = useState<AuthOptions>({
     emailLoginEnabled: true,
     mobileLoginEnabled: true,
     passcodeLoginEnabled: true,
     staffSignupEnabled: true,
   });
+
+  const passwordLoginEnabled = options.emailLoginEnabled || options.mobileLoginEnabled;
+  const passcodeLoginEnabled = options.passcodeLoginEnabled;
+  const signInAvailable = passwordLoginEnabled || passcodeLoginEnabled;
+  const showTabs = passwordLoginEnabled && passcodeLoginEnabled;
+  const showPasswordForm = passwordLoginEnabled && (!passcodeLoginEnabled || mode === 'password');
+  const copy = identifierCopy(options, showPasswordForm);
 
   useEffect(() => {
     authApi.options().then((data) => {
@@ -51,10 +88,15 @@ export function LoginPage() {
   }, []);
 
   useEffect(() => {
-    if (mode === 'passcode' && window.matchMedia('(min-width: 640px)').matches) {
+    if (mode === 'password' && !passwordLoginEnabled && passcodeLoginEnabled) setMode('passcode');
+    if (mode === 'passcode' && !passcodeLoginEnabled && passwordLoginEnabled) setMode('password');
+  }, [mode, passwordLoginEnabled, passcodeLoginEnabled]);
+
+  useEffect(() => {
+    if (!showPasswordForm && window.matchMedia('(min-width: 640px)').matches) {
       pinRef.current?.focus();
     }
-  }, [mode]);
+  }, [showPasswordForm]);
 
   function persistIdentifier() {
     try {
@@ -68,14 +110,26 @@ export function LoginPage() {
   async function onSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     if (loading) return;
+    const trimmed = identifier.trim();
+    if (showPasswordForm) {
+      const looksLikeEmail = trimmed.includes('@');
+      if (looksLikeEmail && !options.emailLoginEnabled) {
+        toast.error('Email login is currently disabled.');
+        return;
+      }
+      if (!looksLikeEmail && !options.mobileLoginEnabled) {
+        toast.error('Mobile login is currently disabled.');
+        return;
+      }
+    }
     setLoading(true);
     try {
-      if (mode === 'password') await login(identifier.trim(), password);
-      else await loginPasscode(identifier.trim(), passcode);
+      if (showPasswordForm) await login(trimmed, password);
+      else await loginPasscode(trimmed, passcode);
       persistIdentifier();
       toast.success('Welcome back');
     } catch {
-      if (mode === 'passcode') setPasscode('');
+      if (!showPasswordForm) setPasscode('');
     } finally {
       setLoading(false);
     }
@@ -94,6 +148,7 @@ export function LoginPage() {
 
   const canSignup = options.staffSignupEnabled !== false;
   const showingSignup = panel === 'signup' && canSignup;
+  const IdentifierIcon = showPasswordForm && !options.emailLoginEnabled && options.mobileLoginEnabled ? Phone : Mail;
 
   return (
     <AuthShell
@@ -101,13 +156,21 @@ export function LoginPage() {
       title={showingSignup ? 'Create your staff account' : 'Welcome back'}
       subtitle={showingSignup
         ? `Join ${APP_NAME} to log shifts, get updates, and message your team.`
-        : `Sign in to ${APP_NAME} with your work email, mobile number, or staff ID.`}
+        : signInAvailable
+          ? copy.subtitle
+          : 'Sign-in is currently unavailable. Please contact Quadrant Care.'}
     >
       {showingSignup ? (
         <StaffSignupForm onBack={() => setPanel('signin')} />
+      ) : !signInAvailable ? (
+        canSignup ? (
+          <Button type="button" variant="secondary" className="w-full" onClick={() => setPanel('signup')}>
+            Create account
+          </Button>
+        ) : null
       ) : (
       <form id="login-form" onSubmit={onSubmit} className="space-y-5">
-        {options.passcodeLoginEnabled && (
+        {showTabs && (
           <div className="grid grid-cols-2 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800" role="tablist" aria-label="Sign-in method">
             {([
               { id: 'password', label: 'Password' },
@@ -133,22 +196,22 @@ export function LoginPage() {
           </div>
         )}
 
-        <AuthField label="Email, mobile or ID" htmlFor="login-identifier">
+        <AuthField label={copy.label} htmlFor="login-identifier">
           <div className="relative">
-            <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+            <IdentifierIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
             <input
               id="login-identifier"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               autoComplete="username"
               required
-              placeholder="e.g. name@quadrantcare.local"
+              placeholder={copy.placeholder}
               className={cn(authControlClass, 'pl-11')}
             />
           </div>
         </AuthField>
 
-        {mode === 'password' ? (
+        {showPasswordForm ? (
           <>
             <AuthField label="Password" htmlFor="login-password">
               <div className="relative">
