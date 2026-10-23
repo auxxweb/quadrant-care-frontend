@@ -8,7 +8,9 @@ import { ScopeTabs, TimesheetScopeFilters } from '../components/timesheet/Timesh
 import { ListFilters } from '../components/filters/ListFilters';
 import { useListFilters } from '../hooks/useListFilters';
 import { useAuth } from '../store/auth';
+import { useProductivePanel } from '../hooks/useMetricsFocus';
 import { downloadWithToast, saveAxiosBlob } from '../utils/download';
+import { formatMinutes } from '../utils';
 import { timesheetNewPath } from '../utils/timesheetLinks';
 import { groupTimesheetsByEmployee } from '../utils/timesheetSheet';
 
@@ -54,6 +56,7 @@ export function TimesheetListPage({
   hideScopeTabs?: boolean;
 }) {
   const { user } = useAuth();
+  const productivePanel = useProductivePanel();
   const { params, search, range, from, to, dates, update } = useListFilters();
   const status = params.has('status') ? (params.get('status') ?? '') : (defaultStatus ?? '');
   const defaultTab = user?.role === 'ADMIN' ? 'employees' : 'staff';
@@ -141,7 +144,11 @@ export function TimesheetListPage({
     <div>
       <PageHeader
         title={pageTitle}
-        subtitle={data ? `${data.total} ${data.total === 1 ? 'entry' : 'entries'} · ${sheets.length} sheet${sheets.length === 1 ? '' : 's'}` : undefined}
+        subtitle={
+          data
+            ? `${data.total} ${data.total === 1 ? 'entry' : 'entries'} · ${sheets.length} sheet${sheets.length === 1 ? '' : 's'} · ${formatMinutes(productivePanel ? (data.totalProductiveMinutes ?? 0) : (data.totalMinutes ?? 0))}`
+            : undefined
+        }
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" loading={pdfLoading} disabled={!items.length} onClick={exportPdf}>

@@ -139,33 +139,6 @@ export const dashboardApi = {
     ),
 };
 
-export const reportsApi = {
-  timesheets: (params?: object) => api.get('/reports/timesheets', { params }).then((r) => r.data),
-  hours: (params?: object) => api.get('/reports/hours', { params }).then((r) => r.data),
-  careHomes: (params?: object) => api.get('/reports/care-homes', { params }).then((r) => r.data),
-  csvUrl: (params: URLSearchParams) => `${API_BASE_URL}/reports/timesheets?${params.toString()}&format=csv`,
-  downloadTimesheetCsv: (params: Record<string, string | undefined> | URLSearchParams) => {
-    const query = params instanceof URLSearchParams
-      ? Object.fromEntries(params.entries())
-      : params;
-    return api.get('/reports/timesheets', {
-      params: { ...query, format: 'csv' },
-      responseType: 'blob',
-      skipToast: true,
-    } as never);
-  },
-  downloadTimesheetPdf: (params: Record<string, string | undefined> | URLSearchParams) => {
-    const query = params instanceof URLSearchParams
-      ? Object.fromEntries(params.entries())
-      : params;
-    return api.get('/reports/timesheets', {
-      params: { ...query, format: 'pdf' },
-      responseType: 'blob',
-      skipToast: true,
-    } as never);
-  },
-};
-
 export const settingsApi = {
   get: () => api.get('/settings').then((r) => r.data),
   update: (payload: object) => api.put('/settings', payload).then((r) => r.data),

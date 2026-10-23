@@ -95,6 +95,8 @@ export interface Paginated<T> {
   total: number;
   page: number;
   pages: number;
+  totalMinutes?: number;
+  totalProductiveMinutes?: number;
 }
 
 export interface NotificationItem {

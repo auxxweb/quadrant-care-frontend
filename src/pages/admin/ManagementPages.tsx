@@ -1,25 +1,19 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { adminApi, auditApi, employeeApi, jobRoleApi, reportsApi, settingsApi } from '../../api/services';
-import { Button, Card, ConfirmDialog, EmptyState, Input, Modal, PageHeader, RecordStatusPill, Skeleton } from '../../components/ui';
+import { adminApi, auditApi, settingsApi } from '../../api/services';
+import { Button, Card, ConfirmDialog, Input, Modal, PageHeader, RecordStatusPill, Skeleton } from '../../components/ui';
 import { ActionButtons } from '../../components/ui/ActionButtons';
 import { ListFilters } from '../../components/filters/ListFilters';
 import { useListFilters } from '../../hooks/useListFilters';
-import { OfficialTimesheetForm } from '../../components/timesheet/OfficialTimesheetForm';
-import { ScopeTabs, TimesheetScopeFilters } from '../../components/timesheet/TimesheetFilters';
+import { formatDateTime } from '../../utils';
 import { Link } from 'react-router-dom';
-import { formatDateTime, formatMinutes } from '../../utils';
-import { downloadWithToast, saveAxiosBlob } from '../../utils/download';
 import { timesheetBrowsePath } from '../../utils/timesheetLinks';
-import { groupTimesheetsByEmployee } from '../../utils/timesheetSheet';
-import { useAuth } from '../../store/auth';
-import { useProductivePanel } from '../../hooks/useMetricsFocus';
 import { useState } from 'react';
 import { ChangeCredentialsForm } from '../../components/auth/ChangeCredentialsForm';
 import { SavedSignatureForm } from '../../components/auth/SavedSignatureForm';
 import { PwaInstallButton } from '../../pwa/PwaInstallButton';
-import type { AuthUser, Timesheet } from '../../types';
+import type { AuthUser } from '../../types';
 
 export function AdminUsersPage() {
   const { search, range, from, to, dates, update } = useListFilters();
@@ -302,160 +296,6 @@ export function AuditLogsPage() {
             <p className="text-sm text-slate-500">{item.description}</p>
             <p className="text-xs text-slate-400">{item.userName} · {formatDateTime(item.createdAt)}</p>
           </Card>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export function ReportsPage() {
-  const { user } = useAuth();
-  const productivePanel = useProductivePanel();
-  const { params, search, range, from, to, dates, update } = useListFilters();
-  const defaultTab = user?.role === 'ADMIN' ? 'employees' : 'staff';
-  const tab = params.get('tab') ?? defaultTab;
-  const employeeId = params.get('employeeId') ?? '';
-  const userId = params.get('userId') ?? '';
-  const jobRoleId = params.get('jobRoleId') ?? '';
-  const ownerRole = tab === 'mine' || tab === 'admins' ? 'ADMIN' : 'STAFF';
-  const listUserId = tab === 'mine' ? user?.id : tab === 'admins' ? userId || undefined : undefined;
-  const listEmployeeId = tab === 'employees' || tab === 'staff' ? employeeId || undefined : undefined;
-  const query = {
-    search: search || undefined,
-    from: dates.from,
-    to: dates.to,
-    employeeId: listEmployeeId,
-    userId: listUserId,
-    jobRoleId: jobRoleId || undefined,
-    ownerRole,
-  };
-  const { data, isLoading } = useQuery({
-    queryKey: ['report-timesheets', query],
-    queryFn: () => reportsApi.timesheets(query) as Promise<{ items: Timesheet[]; totalMinutes: number; totalProductiveMinutes?: number }>,
-  });
-  const employees = useQuery({
-    queryKey: ['employees', 'dropdown'],
-    queryFn: () => employeeApi.list({ limit: 200, status: 'ACTIVE' }),
-    enabled: tab === 'employees' || tab === 'staff',
-  });
-  const admins = useQuery({
-    queryKey: ['admins', 'dropdown'],
-    queryFn: () => adminApi.list({ limit: 200, status: 'ACTIVE' }),
-    enabled: tab === 'admins',
-  });
-  const roles = useQuery({
-    queryKey: ['job-roles', { status: 'ACTIVE' }],
-    queryFn: () => jobRoleApi.list({ status: 'ACTIVE' }),
-  });
-  const items = data?.items ?? [];
-  const [csvLoading, setCsvLoading] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const detailBase = user?.role === 'ADMIN' ? '/admin/timesheets' : '/super-admin/timesheets';
-  const exportQuery = {
-    search: query.search,
-    from: query.from,
-    to: query.to,
-    employeeId: query.employeeId,
-    userId: query.userId,
-    jobRoleId: query.jobRoleId,
-    ownerRole: query.ownerRole,
-  };
-
-  async function exportCsv() {
-    setCsvLoading(true);
-    await downloadWithToast(async () => {
-      const response = await reportsApi.downloadTimesheetCsv(exportQuery);
-      await saveAxiosBlob(response, 'quadrant-care-timesheets.csv');
-    }, 'CSV downloaded.');
-    setCsvLoading(false);
-  }
-
-  async function exportPdf() {
-    setPdfLoading(true);
-    await downloadWithToast(async () => {
-      const response = await reportsApi.downloadTimesheetPdf(exportQuery);
-      await saveAxiosBlob(response, 'quadrant-care-timesheets.pdf');
-    }, 'PDF downloaded.');
-    setPdfLoading(false);
-  }
-
-  return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Reports"
-        subtitle={
-          data
-            ? `${items.length} entries · ${formatMinutes(productivePanel ? (data.totalProductiveMinutes ?? 0) : (data.totalMinutes ?? 0))}`
-            : 'Search and filter timesheet records'
-        }
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" loading={pdfLoading} disabled={!items.length} onClick={exportPdf}>
-              Download PDF
-            </Button>
-            <Button variant="secondary" loading={csvLoading} disabled={!items.length} onClick={exportCsv}>
-              Export CSV
-            </Button>
-          </div>
-        }
-      />
-      {user?.role === 'ADMIN' && (
-        <ScopeTabs
-          tabs={[
-            { value: 'mine', label: 'My timesheet' },
-            { value: 'employees', label: 'Employee timesheet' },
-          ]}
-          value={tab}
-          onChange={(value) => update({ tab: value, employeeId: undefined, userId: undefined })}
-        />
-      )}
-      {user?.role === 'SUPER_ADMIN' && (
-        <ScopeTabs
-          tabs={[
-            { value: 'admins', label: 'Admin timesheet' },
-            { value: 'staff', label: 'Staff timesheet' },
-          ]}
-          value={tab}
-          onChange={(value) => update({ tab: value, employeeId: undefined, userId: undefined })}
-        />
-      )}
-      <ListFilters
-        search={search}
-        onSearch={(value) => update({ q: value })}
-        range={range}
-        onRange={(value) => update({ range: value === 'all' ? undefined : value, from: undefined, to: undefined })}
-        from={from}
-        to={to}
-        onCustomDates={(nextFrom, nextTo) => update({ range: 'custom', from: nextFrom, to: nextTo })}
-        searchPlaceholder="Search name, timesheet ID or care home"
-        extra={
-          <TimesheetScopeFilters
-            employees={employees.data?.items}
-            admins={admins.data?.items}
-            jobRoles={roles.data?.items}
-            employeeId={employeeId}
-            userId={userId}
-            jobRoleId={jobRoleId}
-            onEmployee={(value) => update({ employeeId: value || undefined })}
-            onUser={(value) => update({ userId: value || undefined })}
-            onJobRole={(value) => update({ jobRoleId: value || undefined })}
-            showEmployee={tab === 'employees' || tab === 'staff'}
-            showAdmin={tab === 'admins'}
-            showJobRole={tab === 'employees' || tab === 'staff'}
-          />
-        }
-      />
-      {isLoading && <Skeleton className="h-64" />}
-      {!isLoading && !items.length && (
-        <EmptyState title="No timesheets found" description="Try another search, date range or filter." />
-      )}
-      <div className="space-y-6">
-        {groupTimesheetsByEmployee(items).map((entries) => (
-          <OfficialTimesheetForm
-            key={entries[0].userId || entries[0].employeeId || entries[0]._id}
-            entries={entries}
-            hrefFor={(entry) => `${detailBase}/${entry._id}`}
-          />
         ))}
       </div>
     </div>

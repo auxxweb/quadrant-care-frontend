@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { ForgotPasswordPage, LoginPage, ResetPasswordPage } from './pages/LoginPage';
@@ -11,7 +11,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { SuperAdminDashboard } from './pages/super-admin/SuperAdminDashboard';
 import { EmployeeFormPage, EmployeeListPage } from './pages/employees/EmployeePages';
-import { AccountSettingsPage, AdminUsersPage, AuditLogsPage, MorePage, ReportsPage, SettingsPage } from './pages/admin/ManagementPages';
+import { AccountSettingsPage, AdminUsersPage, AuditLogsPage, MorePage, SettingsPage } from './pages/admin/ManagementPages';
 import { CareHomesPage } from './pages/super-admin/CareHomesPage';
 import { JobRolesPage } from './pages/super-admin/JobRolesPage';
 import { useAuth } from './store/auth';
@@ -47,12 +47,12 @@ export default function App() {
         <Route path="/admin/employees" element={<EmployeeListPage basePath="/admin/employees" />} />
         <Route path="/admin/employees/new" element={<EmployeeFormPage basePath="/admin/employees" />} />
         <Route path="/admin/employees/:id" element={<EmployeeFormPage basePath="/admin/employees" />} />
-        <Route path="/admin/reports" element={<ReportsPage />} />
+        <Route path="/admin/reports" element={<ReportsRedirect to="/admin/timesheets" />} />
         <Route path="/admin/inbox" element={<InboxPage basePath="/admin/inbox" />} />
         <Route path="/admin/inbox/:id" element={<InboxPage basePath="/admin/inbox" />} />
         <Route path="/admin/settings" element={<AccountSettingsPage />} />
         <Route path="/admin/profile" element={<ProfilePage />} />
-        <Route path="/admin/more" element={<MorePage items={[{ to: '/admin/inbox', label: 'Inbox' }, { to: '/admin/reports', label: 'Reports' }, { to: '/admin/settings', label: 'Settings' }, { to: '/admin/profile', label: 'Profile' }]} />} />
+        <Route path="/admin/more" element={<MorePage items={[{ to: '/admin/inbox', label: 'Inbox' }, { to: '/admin/timesheets', label: 'Timesheets' }, { to: '/admin/settings', label: 'Settings' }, { to: '/admin/profile', label: 'Profile' }]} />} />
       </Route>
 
       <Route element={<ProtectedRoute roles={['SUPER_ADMIN']} />}>
@@ -66,7 +66,7 @@ export default function App() {
         <Route path="/super-admin/admins" element={<AdminUsersPage />} />
         <Route path="/super-admin/care-homes" element={<CareHomesPage />} />
         <Route path="/super-admin/job-roles" element={<JobRolesPage />} />
-        <Route path="/super-admin/reports" element={<ReportsPage />} />
+        <Route path="/super-admin/reports" element={<ReportsRedirect to="/super-admin/timesheets" />} />
         <Route path="/super-admin/inbox" element={<InboxPage basePath="/super-admin/inbox" />} />
         <Route path="/super-admin/inbox/:id" element={<InboxPage basePath="/super-admin/inbox" />} />
         <Route path="/super-admin/audit-logs" element={<AuditLogsPage />} />
@@ -86,6 +86,11 @@ export default function App() {
       <Route path="*" element={<HomeRedirect />} />
     </Routes>
   );
+}
+
+function ReportsRedirect({ to }: { to: string }) {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: to, search }} replace />;
 }
 
 function GuestOnly({ children }: { children: ReactNode }) {
