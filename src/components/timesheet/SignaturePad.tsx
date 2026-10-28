@@ -4,6 +4,7 @@ import { Button } from '../ui';
 export function SignaturePad({ value, onChange }: { value?: string; onChange: (value: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
+  const hasInk = useRef(Boolean(value));
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -45,12 +46,14 @@ export function SignaturePad({ value, onChange }: { value?: string; onChange: (v
     const { x, y } = pos(event);
     ctx?.lineTo(x, y);
     ctx?.stroke();
+    hasInk.current = true;
   }
 
   function end() {
+    if (!drawing.current) return;
     drawing.current = false;
     const canvas = canvasRef.current;
-    if (canvas) onChange(canvas.toDataURL('image/png'));
+    if (canvas && hasInk.current) onChange(canvas.toDataURL('image/png'));
   }
 
   function clear() {
@@ -58,6 +61,7 @@ export function SignaturePad({ value, onChange }: { value?: string; onChange: (v
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     ctx?.clearRect(0, 0, canvas.width, canvas.height);
+    hasInk.current = false;
     onChange('');
   }
 
