@@ -25,6 +25,7 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [signature, setSignature] = useState('');
+  const [careHomeSignature, setCareHomeSignature] = useState('');
   const [useSavedSignature, setUseSavedSignature] = useState(Boolean(user?.signaturePath));
   const [remarks, setRemarks] = useState('');
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -62,7 +63,12 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
     setHoursModalOpen(searchParams.get('edit') === 'hours');
   }, [searchParams]);
 
-  const submit = useMutation({ mutationFn: () => timesheetApi.submit(id),     onSuccess: () => { toast.success('Timesheet submitted successfully.'); qc.invalidateQueries(); } });
+  const submit = useMutation({
+    mutationFn: async () => {
+      if (careHomeSignature) await timesheetApi.update(id, { careHomeSignature });
+      return timesheetApi.submit(id);
+    },
+    onSuccess: () => { toast.success('Timesheet submitted successfully.'); qc.invalidateQueries(); } });
   const verify = useMutation({
     mutationFn: () => timesheetApi.adminVerify(id, {
       remarks,
@@ -87,7 +93,7 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
         toast.error(message);
         throw error;
       }
-      await timesheetApi.update(id, edit);
+      await timesheetApi.update(id, careHomeSignature ? { ...edit, careHomeSignature } : edit);
       await timesheetApi.submit(id);
     },
     onSuccess: () => {
@@ -117,6 +123,7 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
   const isOwn = Boolean(user?.id && data.userId && String(user.id) === String(data.userId));
   const ownerCanEdit = (user?.role === 'STAFF' || (user?.role === 'ADMIN' && isOwn)) && ['DRAFT', 'ADMIN_REJECTED', 'SUPER_ADMIN_REJECTED'].includes(data.status);
   const isStaffSheet = data.ownerRole !== 'ADMIN';
+  const missingCareHomeSignature = isStaffSheet && !data.careHomeSignaturePath && !careHomeSignature;
   const managerCanEditHours = Boolean(
     !productivePanel
     && isStaffSheet
@@ -180,7 +187,7 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
           <Button variant="accent" onClick={openHoursModal}>Edit hours & break</Button>
         )}
         {ownerCanEdit && data.status === 'DRAFT' && (
-          <Button variant="accent" loading={submit.isPending} onClick={() => submit.mutate()}>Submit</Button>
+          <Button variant="accent" disabled={missingCareHomeSignature} loading={submit.isPending} onClick={() => submit.mutate()}>Submit</Button>
         )}
       </div>
       {ownerCanEdit && (
@@ -198,7 +205,18 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
             <Input label="Incharge / supervisor" value={edit.inchargeName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdit((v) => ({ ...v, inchargeName: e.target.value }))} />
           )}
           <Input label="Remarks" value={edit.remarks} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdit((v) => ({ ...v, remarks: e.target.value }))} />
-          <Button variant="accent" className="w-full" loading={saveCorrection.isPending} onClick={() => saveCorrection.mutate()}>Resubmit timesheet</Button>
+          {isStaffSheet && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Care Home In-Charge Signature</p>
+              {data.careHomeSignaturePath ? (
+                <p className="text-xs text-slate-500">Already signed. Draw below only to replace the signature.</p>
+              ) : (
+                <p className="text-sm text-red-600">A Care Home In-Charge Signature is required before submitting.</p>
+              )}
+              <SignaturePad value={careHomeSignature} onChange={setCareHomeSignature} />
+            </div>
+          )}
+          <Button variant="accent" className="w-full" disabled={missingCareHomeSignature} loading={saveCorrection.isPending} onClick={() => saveCorrection.mutate()}>Resubmit timesheet</Button>
         </div>
       )}
       {adminCanReview && (

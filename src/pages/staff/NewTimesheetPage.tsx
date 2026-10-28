@@ -43,6 +43,7 @@ export function NewTimesheetPage() {
   const [hours, setHours] = useState('0:00');
   const [hoursError, setHoursError] = useState('');
   const [careHomeSignature, setCareHomeSignature] = useState('');
+  const [signatureError, setSignatureError] = useState('');
   const isAdmin = user?.role === 'ADMIN';
   const assignedRoles = employeeJobRoles(employee);
   const primaryRole = employeePrimaryJobRole(employee);
@@ -84,6 +85,10 @@ export function NewTimesheetPage() {
     const jobRoleId = isAdmin ? undefined : values.jobRoleId || primaryRole?._id;
     if (!isAdmin && !jobRoleId) {
       toast.error('Select a job role.');
+      return;
+    }
+    if (!isAdmin && submit && !careHomeSignature) {
+      setSignatureError('Care Home In-Charge Signature is required.');
       return;
     }
     const created = await timesheetApi.create({
@@ -131,9 +136,10 @@ export function NewTimesheetPage() {
         )}
         {!isAdmin && (
           <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Care Home In-Charge Signature (optional)</p>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Care Home In-Charge Signature</p>
             <p className="text-xs text-slate-500">Ask the care home admin or incharge to sign here when the shift is confirmed.</p>
-            <SignaturePad value={careHomeSignature} onChange={setCareHomeSignature} />
+            <SignaturePad value={careHomeSignature} onChange={(value) => { setCareHomeSignature(value); if (value) setSignatureError(''); }} />
+            {signatureError && <p className="text-sm text-red-600">{signatureError}</p>}
           </div>
         )}
         <Input label="Remarks" {...form.register('remarks')} />
