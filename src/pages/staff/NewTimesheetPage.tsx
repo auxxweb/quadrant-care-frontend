@@ -131,7 +131,7 @@ export function NewTimesheetPage() {
         )}
         {!isAdmin && (
           <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Care home admin signature (optional)</p>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Care Home In-Charge Signature (optional)</p>
             <p className="text-xs text-slate-500">Ask the care home admin or incharge to sign here when the shift is confirmed.</p>
             <SignaturePad value={careHomeSignature} onChange={setCareHomeSignature} />
           </div>

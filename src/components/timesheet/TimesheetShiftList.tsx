@@ -123,7 +123,7 @@ export function TimesheetShiftList({
                 <p>Incharge: {item.inchargeName || '—'}</p>
                 {signPath && (
                   <div>
-                    <p className="text-slate-500">{item.careHomeSignaturePath ? 'Care home admin sign' : 'Admin sign'}</p>
+                    <p className="text-slate-500">{item.careHomeSignaturePath ? 'Care Home In-Charge sign' : 'Admin sign'}</p>
                     <img src={fileUrl(signPath)} alt="Signature" className="mt-1 h-10 max-w-[120px] object-contain" />
                   </div>
                 )}

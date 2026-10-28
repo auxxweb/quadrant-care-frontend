@@ -238,10 +238,10 @@ export function OfficialTimesheetForm({
         <div className="grid gap-3 border-t border-slate-300 px-3 py-3 text-sm sm:grid-cols-2 sm:px-5">
           {items.some((item) => item.careHomeSignaturePath) && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Care home admin signature</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Care Home In-Charge Signature</p>
               <img
                 src={fileUrl(items.find((item) => item.careHomeSignaturePath)!.careHomeSignaturePath)}
-                alt="Care home admin signature"
+                alt="Care Home In-Charge Signature"
                 className="mt-1 h-12 max-w-[180px] object-contain"
               />
               {items.find((item) => item.careHomeSignaturePath)?.inchargeName && (

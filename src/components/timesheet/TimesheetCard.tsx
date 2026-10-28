@@ -49,7 +49,7 @@ export function TimesheetCard({ item, href }: { item: Timesheet; href: string })
       {!productivePanel && (item.careHomeSignaturePath || item.adminSignaturePath) && (
         <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-            {item.careHomeSignaturePath ? 'Care home admin sign' : 'Admin sign'}
+            {item.careHomeSignaturePath ? 'Care Home In-Charge sign' : 'Admin sign'}
           </p>
           <img
             src={fileUrl(item.careHomeSignaturePath || item.adminSignaturePath)}
