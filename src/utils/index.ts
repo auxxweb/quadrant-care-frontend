@@ -39,6 +39,13 @@ export function calculateShiftDuration(startTime: string, endTime: string, break
   return { totalMinutes, formattedHours: `${hours}:${String(minutes).padStart(2, '0')}` };
 }
 
+export function formatTime12h(value?: string) {
+  if (!value) return '—';
+  const [h, m] = value.split(':').map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return value;
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+}
+
 export function formatDate(value?: string) {
   if (!value) return '—';
   return new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });

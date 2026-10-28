@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { adminApi, timesheetApi } from '../../api/services';
 import { useAuth } from '../../store/auth';
-import { Button, Input, PageHeader, Select } from '../../components/ui';
+import { Button, Input, PageHeader, Select, TimeInput } from '../../components/ui';
 import { CareHomeSelect } from '../../components/timesheet/CareHomeSelect';
 import { SignaturePad } from '../../components/timesheet/SignaturePad';
 import { calculateShiftDuration, employeeJobRoles, employeePrimaryJobRole, toInputDate } from '../../utils';
@@ -104,8 +104,8 @@ export function NewTimesheetPage() {
       <form className="card space-y-4 p-5" onSubmit={form.handleSubmit((v) => save(v, true))}>
         <Input label="Date" type="date" {...form.register('date')} />
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Start time" type="time" {...form.register('startTime')} />
-          <Input label="End time" type="time" {...form.register('endTime')} error={form.formState.errors.endTime?.message} />
+          <TimeInput label="Start time" value={watch.startTime} onChange={(value) => form.setValue('startTime', value, { shouldValidate: true })} />
+          <TimeInput label="End time" value={watch.endTime} onChange={(value) => form.setValue('endTime', value, { shouldValidate: true })} error={form.formState.errors.endTime?.message} />
         </div>
         <Input label="Break duration (minutes)" type="number" {...form.register('breakDuration')} />
         <div className="rounded-2xl bg-brand-50 p-4 text-brand-600 dark:bg-brand-900/30 dark:text-white">

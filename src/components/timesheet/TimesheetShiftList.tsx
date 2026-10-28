@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { Timesheet } from '../../types';
-import { formatDate, fileUrl } from '../../utils';
+import { formatDate, formatTime12h, fileUrl } from '../../utils';
 import { StatusBadge } from '../ui';
 import { useProductivePanel } from '../../hooks/useMetricsFocus';
 
@@ -65,8 +65,8 @@ export function TimesheetShiftList({
                   <td className="px-3 py-3">{item.productiveHoursDisplay ?? '0:00'}</td>
                 ) : (
                   <>
-                    <td className="px-3 py-3">{item.startTime}</td>
-                    <td className="px-3 py-3">{item.endTime}</td>
+                    <td className="px-3 py-3">{formatTime12h(item.startTime)}</td>
+                    <td className="px-3 py-3">{formatTime12h(item.endTime)}</td>
                     <td className="px-3 py-3">{item.breakDuration}m</td>
                     <td className="px-3 py-3">{item.totalHoursDisplay}</td>
                   </>
@@ -117,7 +117,7 @@ export function TimesheetShiftList({
             ) : (
               <>
                 <p>
-                  {item.startTime} → {item.endTime}
+                  {formatTime12h(item.startTime)} → {formatTime12h(item.endTime)}
                 </p>
                 <p>Break {item.breakDuration} min · {item.totalHoursDisplay} hours</p>
                 <p>Incharge: {item.inchargeName || '—'}</p>

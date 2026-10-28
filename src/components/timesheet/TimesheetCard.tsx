@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { Timesheet } from '../../types';
-import { formatDate, fileUrl } from '../../utils';
+import { formatDate, formatTime12h, fileUrl } from '../../utils';
 import { StatusBadge } from '../ui';
 import { useProductivePanel } from '../../hooks/useMetricsFocus';
 
@@ -27,7 +27,7 @@ export function TimesheetCard({ item, href }: { item: Timesheet; href: string })
         <div className="grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 p-3 text-sm dark:bg-slate-800/80">
           <div>
             <p className="text-xs text-slate-500">Shift</p>
-            <p className="font-semibold">{item.startTime} → {item.endTime}</p>
+            <p className="font-semibold">{formatTime12h(item.startTime)} → {formatTime12h(item.endTime)}</p>
           </div>
           <div>
             <p className="text-xs text-slate-500">Hours</p>

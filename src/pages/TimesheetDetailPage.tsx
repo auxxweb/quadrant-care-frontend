@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { timesheetApi } from '../api/services';
 import { TimesheetPreview } from '../components/timesheet/TimesheetPreview';
 import { SignaturePad } from '../components/timesheet/SignaturePad';
-import { Button, Input, Modal, Skeleton } from '../components/ui';
+import { Button, Input, Modal, Skeleton, TimeInput } from '../components/ui';
 import { useAuth } from '../store/auth';
 import { useProductivePanel } from '../hooks/useMetricsFocus';
 import { calculateShiftDuration, fileUrl } from '../utils';
@@ -188,8 +188,8 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
           <h3 className="text-lg font-semibold">Correct timesheet</h3>
           {data.rejectionReason && <p className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">Rejection reason: {data.rejectionReason}</p>}
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Start" type="time" value={edit.startTime} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdit((v) => ({ ...v, startTime: e.target.value }))} />
-            <Input label="End" type="time" value={edit.endTime} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdit((v) => ({ ...v, endTime: e.target.value }))} />
+            <TimeInput label="Start" value={edit.startTime} onChange={(value) => setEdit((v) => ({ ...v, startTime: value }))} />
+            <TimeInput label="End" value={edit.endTime} onChange={(value) => setEdit((v) => ({ ...v, endTime: value }))} />
           </div>
           <Input label="Break (minutes)" type="number" value={edit.breakDuration} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdit((v) => ({ ...v, breakDuration: Number(e.target.value) }))} />
           {data.ownerRole === 'ADMIN' ? (
@@ -253,8 +253,8 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
         <div className="space-y-4">
           <p className="text-sm text-slate-500">Change start time, end time, or break for this staff timesheet.</p>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Start" type="time" value={hoursEdit.startTime} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHoursEdit((v) => ({ ...v, startTime: e.target.value }))} />
-            <Input label="End" type="time" value={hoursEdit.endTime} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHoursEdit((v) => ({ ...v, endTime: e.target.value }))} />
+            <TimeInput label="Start" value={hoursEdit.startTime} onChange={(value) => setHoursEdit((v) => ({ ...v, startTime: value }))} />
+            <TimeInput label="End" value={hoursEdit.endTime} onChange={(value) => setHoursEdit((v) => ({ ...v, endTime: value }))} />
           </div>
           <Input label="Break (minutes)" type="number" value={hoursEdit.breakDuration} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHoursEdit((v) => ({ ...v, breakDuration: Number(e.target.value) }))} />
           <div className="rounded-2xl bg-slate-50 p-3 text-sm dark:bg-slate-800">

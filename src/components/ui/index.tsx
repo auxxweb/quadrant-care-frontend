@@ -56,6 +56,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ l
 });
 
 export { Select } from './DropdownSelect';
+export { TimeInput } from './TimeInput';
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return <div className={cn('card p-5', className)}>{children}</div>;

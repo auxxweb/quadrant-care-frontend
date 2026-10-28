@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { BrandLogo } from '../brand/BrandLogo';
 import { COMPANY_DETAILS, STATUS_META, type TimesheetStatus } from '../../constants';
-import { displayName, fileUrl } from '../../utils';
+import { displayName, fileUrl, formatTime12h } from '../../utils';
 import { formatClockHours, formatSheetDate, sheetWeekLabel, sortTimesheets } from '../../utils/timesheetSheet';
 import { cn } from '../../utils';
 import { useAuth } from '../../store/auth';
@@ -174,8 +174,8 @@ export function OfficialTimesheetForm({
                     </td>
                   ) : (
                     <>
-                      <td className="border border-slate-400 px-2 py-2">{item.startTime}</td>
-                      <td className="border border-slate-400 px-2 py-2">{item.endTime}</td>
+                      <td className="border border-slate-400 px-2 py-2">{formatTime12h(item.startTime)}</td>
+                      <td className="border border-slate-400 px-2 py-2">{formatTime12h(item.endTime)}</td>
                       <td className="border border-slate-400 px-2 py-2">{item.breakDuration}</td>
                       <td className="border border-slate-400 px-2 py-2">{item.totalHoursDisplay}</td>
                     </>
