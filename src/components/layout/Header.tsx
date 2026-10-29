@@ -47,7 +47,7 @@ export function Header() {
   }
 
   return (
-    <header className="flex items-center gap-2 border-b border-slate-200 bg-white/90 px-3 py-3 sm:gap-3 sm:px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+    <header className="relative z-10 flex items-center gap-2 border-b border-slate-200 bg-white/90 px-3 py-3 sm:gap-3 sm:px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
       <BrandLogo className="h-9 w-auto shrink-0 md:hidden" />
       <div className="relative hidden min-w-0 flex-1 md:block">
         <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
