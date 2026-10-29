@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
 } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { cn, formatRecordStatus } from '../../utils';
 import { STATUS_META, type TimesheetStatus } from '../../constants';
 
@@ -38,18 +39,34 @@ export function Button({
 
 type InputProps = InputHTMLAttributes<HTMLInputElement> & { label?: string; error?: string };
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ label, error, className, ...props }, ref) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ label, error, className, type, ...props }, ref) {
+  const isPassword = type === 'password';
+  const [showPassword, setShowPassword] = useState(false);
   return (
     <label className="block space-y-1.5">
       {label && <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{label}</span>}
-      <input
-        ref={ref}
-        className={cn(
-          'min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none ring-brand-600 focus:ring-2 dark:border-slate-700 dark:bg-slate-900',
-          className,
+      <div className="relative">
+        <input
+          ref={ref}
+          type={isPassword && showPassword ? 'text' : type}
+          className={cn(
+            'min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none ring-brand-600 focus:ring-2 dark:border-slate-700 dark:bg-slate-900',
+            isPassword && 'pr-12',
+            className,
+          )}
+          {...props}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            onClick={() => setShowPassword((open) => !open)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
         )}
-        {...props}
-      />
+      </div>
       {error && <span className="text-xs text-red-600">{error}</span>}
     </label>
   );
