@@ -198,7 +198,7 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
             <TimeInput label="Start" value={edit.startTime} onChange={(value) => setEdit((v) => ({ ...v, startTime: value }))} />
             <TimeInput label="End" value={edit.endTime} onChange={(value) => setEdit((v) => ({ ...v, endTime: value }))} />
           </div>
-          <Input label="Break (minutes)" type="number" value={edit.breakDuration} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdit((v) => ({ ...v, breakDuration: Number(e.target.value) }))} />
+          <Input label="Break (minutes)" type="number" min={0} value={edit.breakDuration} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdit((v) => ({ ...v, breakDuration: Number(e.target.value) }))} />
           {data.ownerRole === 'ADMIN' ? (
             <Input label="Incharge / supervisor" value={edit.inchargeName || 'Super Admin'} readOnly />
           ) : (
@@ -274,7 +274,7 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
             <TimeInput label="Start" value={hoursEdit.startTime} onChange={(value) => setHoursEdit((v) => ({ ...v, startTime: value }))} />
             <TimeInput label="End" value={hoursEdit.endTime} onChange={(value) => setHoursEdit((v) => ({ ...v, endTime: value }))} />
           </div>
-          <Input label="Break (minutes)" type="number" value={hoursEdit.breakDuration} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHoursEdit((v) => ({ ...v, breakDuration: Number(e.target.value) }))} />
+          <Input label="Break (minutes)" type="number" min={0} value={hoursEdit.breakDuration} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHoursEdit((v) => ({ ...v, breakDuration: Number(e.target.value) }))} />
           <div className="rounded-2xl bg-slate-50 p-3 text-sm dark:bg-slate-800">
             <span className="text-slate-500">Total hours: </span>
             <span className="font-semibold">{previewHours}</span>

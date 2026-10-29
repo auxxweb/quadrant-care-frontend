@@ -17,7 +17,7 @@ const schema = z.object({
   date: z.string().min(1),
   startTime: z.string().min(1),
   endTime: z.string().min(1),
-  breakDuration: z.coerce.number().min(0),
+  breakDuration: z.coerce.number().min(0, 'Break duration cannot be negative.'),
   jobRoleId: z.string().optional(),
   careHomeId: z.string().min(1, 'Select a care home'),
   inchargeName: z.string().min(1, 'Incharge name is required'),
@@ -112,7 +112,7 @@ export function NewTimesheetPage() {
           <TimeInput label="Start time" value={watch.startTime} onChange={(value) => form.setValue('startTime', value, { shouldValidate: true })} />
           <TimeInput label="End time" value={watch.endTime} onChange={(value) => form.setValue('endTime', value, { shouldValidate: true })} error={form.formState.errors.endTime?.message} />
         </div>
-        <Input label="Break duration (minutes)" type="number" {...form.register('breakDuration')} />
+        <Input label="Break duration (minutes)" type="number" min={0} {...form.register('breakDuration')} />
         <div className="rounded-2xl bg-brand-50 p-4 text-brand-600 dark:bg-brand-900/30 dark:text-white">
           <p className="text-xs uppercase tracking-wide">Total hours worked</p>
           <p className="text-3xl font-bold">{hours}</p>

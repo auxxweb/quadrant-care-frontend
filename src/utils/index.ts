@@ -24,6 +24,7 @@ export function calculateShiftDuration(startTime: string, endTime: string, break
     const [h, m] = value.split(':').map(Number);
     return h * 60 + m;
   };
+  if (!Number.isFinite(breakMinutes) || breakMinutes < 0) throw new Error('Break duration cannot be negative.');
   let duration = parse(endTime) - parse(startTime);
   if (duration <= 0) {
     if (!allowOvernight) throw new Error('End time must be after start time.');

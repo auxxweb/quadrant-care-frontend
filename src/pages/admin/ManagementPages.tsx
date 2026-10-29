@@ -214,6 +214,11 @@ export function SettingsPage() {
       toast.error(LOGIN_METHOD_REQUIRED);
       return;
     }
+    const breakDuration = Number(values.defaultBreakDuration);
+    if (!Number.isFinite(breakDuration) || breakDuration < 0) {
+      toast.error('Break duration cannot be negative.');
+      return;
+    }
     if (authFlagsChanged(values, saved)) {
       setPendingValues(values);
       return;
@@ -245,7 +250,7 @@ export function SettingsPage() {
         </Card>
         <Card className="space-y-3">
           <h3 className="font-semibold">Timesheet</h3>
-          <Input label="Default break duration" type="number" {...form.register('defaultBreakDuration', { valueAsNumber: true })} />
+          <Input label="Default break duration" type="number" min={0} {...form.register('defaultBreakDuration', { valueAsNumber: true })} />
           <label className="flex items-center gap-2"><input type="checkbox" {...form.register('allowOvernightShifts')} /> Allow overnight shifts</label>
           <label className="flex items-center gap-2"><input type="checkbox" {...form.register('requireInchargeName')} /> Require incharge name</label>
           <label className="flex items-center gap-2"><input type="checkbox" {...form.register('requireAdminSignature')} /> Require admin signature</label>
