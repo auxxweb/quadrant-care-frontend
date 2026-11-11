@@ -1,6 +1,6 @@
 import { cn, formatOptionLabel } from '../../utils';
 import { Select } from '../ui';
-import type { AuthUser, Employee, JobRole } from '../../types';
+import type { AuthUser, CareHome, Employee, JobRole } from '../../types';
 
 export function ScopeTabs({
   tabs,
@@ -34,30 +34,38 @@ export function TimesheetScopeFilters({
   employees,
   admins,
   jobRoles,
+  careHomes,
   employeeId,
   userId,
   jobRoleId,
+  careHomeId,
   onEmployee,
   onUser,
   onJobRole,
+  onCareHome,
   showEmployee,
   showAdmin,
   showJobRole,
+  showCareHome,
 }: {
   employees?: Employee[];
   admins?: AuthUser[];
   jobRoles?: JobRole[];
+  careHomes?: CareHome[];
   employeeId?: string;
   userId?: string;
   jobRoleId?: string;
+  careHomeId?: string;
   onEmployee?: (value: string) => void;
   onUser?: (value: string) => void;
   onJobRole?: (value: string) => void;
+  onCareHome?: (value: string) => void;
   showEmployee?: boolean;
   showAdmin?: boolean;
   showJobRole?: boolean;
+  showCareHome?: boolean;
 }) {
-  if (!showEmployee && !showAdmin && !showJobRole) return null;
+  if (!showEmployee && !showAdmin && !showJobRole && !showCareHome) return null;
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {showEmployee && (
@@ -86,6 +94,16 @@ export function TimesheetScopeFilters({
           {jobRoles?.map((item) => (
             <option key={item._id} value={item._id}>
               {item.name}
+            </option>
+          ))}
+        </Select>
+      )}
+      {showCareHome && (
+        <Select label="Care home" value={careHomeId ?? ''} onChange={(e) => onCareHome?.(e.target.value)}>
+          <option value="">All care homes</option>
+          {careHomes?.map((home) => (
+            <option key={home._id} value={home._id}>
+              {home.name}
             </option>
           ))}
         </Select>

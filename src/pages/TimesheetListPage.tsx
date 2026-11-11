@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { adminApi, employeeApi, jobRoleApi, timesheetApi } from '../api/services';
+import { adminApi, careHomeApi, employeeApi, jobRoleApi, timesheetApi } from '../api/services';
 import { Button, EmptyState, PageHeader, Skeleton } from '../components/ui';
 import { OfficialTimesheetForm } from '../components/timesheet/OfficialTimesheetForm';
 import { ScopeTabs, TimesheetScopeFilters } from '../components/timesheet/TimesheetFilters';
@@ -64,6 +64,7 @@ export function TimesheetListPage({
   const employeeId = params.get('employeeId') ?? '';
   const userId = params.get('userId') ?? '';
   const jobRoleId = params.get('jobRoleId') ?? '';
+  const careHomeId = params.get('careHomeId') ?? '';
 
   const ownerRole = tab === 'mine' || tab === 'admins' ? 'ADMIN' : tab === 'employees' || tab === 'staff' ? 'STAFF' : undefined;
   const listUserId = tab === 'mine' ? user?.id : tab === 'admins' ? userId || undefined : undefined;
@@ -84,9 +85,14 @@ export function TimesheetListPage({
     queryFn: () => jobRoleApi.list({ status: 'ACTIVE' }),
     enabled: Boolean(user && user.role !== 'STAFF'),
   });
+  const careHomes = useQuery({
+    queryKey: ['care-homes', { status: 'ACTIVE' }],
+    queryFn: () => careHomeApi.list({ status: 'ACTIVE' }),
+    enabled: Boolean(user),
+  });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['timesheets', basePath, tab, status, search, dates.from, dates.to, listEmployeeId, listUserId, jobRoleId, ownerRole],
+    queryKey: ['timesheets', basePath, tab, status, search, dates.from, dates.to, listEmployeeId, listUserId, jobRoleId, careHomeId, ownerRole],
     queryFn: () =>
       timesheetApi.list({
         status: status || undefined,
@@ -96,6 +102,7 @@ export function TimesheetListPage({
         employeeId: listEmployeeId,
         userId: listUserId,
         jobRoleId: jobRoleId || undefined,
+        careHomeId: careHomeId || undefined,
         ownerRole,
         limit: 200,
       }),
@@ -119,6 +126,7 @@ export function TimesheetListPage({
     employeeId: listEmployeeId,
     userId: listUserId,
     jobRoleId: jobRoleId || undefined,
+    careHomeId: careHomeId || undefined,
     ownerRole,
   };
 
@@ -170,7 +178,7 @@ export function TimesheetListPage({
             { value: 'employees', label: 'Employee timesheet' },
           ]}
           value={tab}
-          onChange={(value) => update({ tab: value, employeeId: undefined, userId: undefined, status: undefined })}
+          onChange={(value) => update({ tab: value, employeeId: undefined, userId: undefined, careHomeId: undefined, status: undefined })}
         />
       )}
       {!hideScopeTabs && user?.role === 'SUPER_ADMIN' && (
@@ -180,7 +188,7 @@ export function TimesheetListPage({
             { value: 'staff', label: 'Staff timesheet' },
           ]}
           value={tab}
-          onChange={(value) => update({ tab: value, employeeId: undefined, userId: undefined, status: undefined })}
+          onChange={(value) => update({ tab: value, employeeId: undefined, userId: undefined, careHomeId: undefined, status: undefined })}
         />
       )}
       <ListFilters
@@ -198,15 +206,19 @@ export function TimesheetListPage({
               employees={employees.data?.items}
               admins={admins.data?.items}
               jobRoles={roles.data?.items}
+              careHomes={careHomes.data?.items}
               employeeId={employeeId}
               userId={userId}
               jobRoleId={jobRoleId}
+              careHomeId={careHomeId}
               onEmployee={(value) => update({ employeeId: value || undefined })}
               onUser={(value) => update({ userId: value || undefined })}
               onJobRole={(value) => update({ jobRoleId: value || undefined })}
+              onCareHome={(value) => update({ careHomeId: value || undefined })}
               showEmployee={tab === 'employees' || tab === 'staff'}
               showAdmin={tab === 'admins'}
               showJobRole={tab === 'employees' || tab === 'staff'}
+              showCareHome
             />
             <div className="flex flex-wrap gap-2">
               {statusFilters.map((filter) => (
