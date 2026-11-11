@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { adminApi, careHomeApi, employeeApi, jobRoleApi, timesheetApi } from '../api/services';
@@ -10,6 +10,7 @@ import { useListFilters } from '../hooks/useListFilters';
 import { useAuth } from '../store/auth';
 import { useProductivePanel } from '../hooks/useMetricsFocus';
 import { downloadWithToast, saveAxiosBlob } from '../utils/download';
+import { exportTimesheetSheetsAsJpeg } from '../utils/timesheetJpeg';
 import { formatMinutes } from '../utils';
 import { timesheetNewPath } from '../utils/timesheetLinks';
 import { groupTimesheetsByEmployee } from '../utils/timesheetSheet';
@@ -117,6 +118,8 @@ export function TimesheetListPage({
     tab === 'mine' ? 'My Timesheets' : tab === 'employees' ? 'Employee Timesheets' : tab === 'admins' ? 'Admin Timesheets' : tab === 'staff' ? 'Staff Timesheets' : title;
   const [csvLoading, setCsvLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [jpegLoading, setJpegLoading] = useState(false);
+  const sheetsRef = useRef<HTMLDivElement>(null);
 
   const exportParams = {
     status: status || undefined,
@@ -148,6 +151,16 @@ export function TimesheetListPage({
     setPdfLoading(false);
   }
 
+  async function exportJpeg() {
+    setJpegLoading(true);
+    await downloadWithToast(async () => {
+      const root = sheetsRef.current;
+      if (!root) throw new Error('Timesheet sheets are not ready yet.');
+      await exportTimesheetSheetsAsJpeg([root], 'quadrant-care-timesheets');
+    }, sheets.length > 1 ? 'JPEG ZIP downloaded.' : 'JPEG downloaded.');
+    setJpegLoading(false);
+  }
+
   return (
     <div>
       <PageHeader
@@ -161,6 +174,9 @@ export function TimesheetListPage({
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" loading={pdfLoading} disabled={!items.length} onClick={exportPdf}>
               Download PDF
+            </Button>
+            <Button variant="secondary" loading={jpegLoading} disabled={!items.length} onClick={exportJpeg}>
+              Download JPEG
             </Button>
             <Button variant="secondary" loading={csvLoading} disabled={!items.length} onClick={exportCsv}>
               Export CSV
@@ -243,7 +259,7 @@ export function TimesheetListPage({
           action={canAdd ? <Link to={timesheetNewPath(user?.role)}><Button>Add Timesheet</Button></Link> : null}
         />
       )}
-      <div className="space-y-6">
+      <div ref={sheetsRef} className="space-y-6">
         {sheets.map((entries) => (
           <OfficialTimesheetForm
             key={entries[0].userId || entries[0].employeeId || entries[0]._id}

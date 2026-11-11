@@ -82,8 +82,18 @@ export function OfficialTimesheetForm({
     signed || adminName || adminRemarks || superName || superRemarks || rejection,
   );
 
+  const exportName = [
+    primary.employeeSnapshot?.name,
+    items.length === 1 ? primary.timesheetId : sheetWeekLabel(items),
+  ]
+    .filter(Boolean)
+    .join('-');
+
   return (
-    <section className="official-timesheet print-sheet overflow-hidden bg-white text-slate-900 shadow-card ring-1 ring-slate-300">
+    <section
+      className="official-timesheet print-sheet overflow-hidden bg-white text-slate-900 shadow-card ring-1 ring-slate-300"
+      data-export-name={exportName || primary.timesheetId || primary._id}
+    >
       <header className="grid gap-3 border-b border-slate-300 px-3 py-4 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-4 sm:px-5">
         <BrandLogo className="h-14 w-auto justify-self-start rounded-none bg-transparent sm:h-20" />
         <div className="min-w-0 text-center">
@@ -106,7 +116,7 @@ export function OfficialTimesheetForm({
         </p>
         <div className="flex flex-wrap items-center gap-2">
           {items.length === 1 && statusMeta && (
-            <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase', statusMeta.className)}>
+            <span className={cn('no-jpeg-export rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase', statusMeta.className)}>
               {statusMeta.label}
             </span>
           )}
@@ -146,8 +156,14 @@ export function OfficialTimesheetForm({
         <table className="w-full min-w-[980px] border-collapse text-left text-[11px]">
           <thead>
             <tr className="bg-slate-200">
-              {columns.map((heading) => (
-                <th key={heading} className="border border-slate-400 px-2 py-2 font-semibold uppercase tracking-wide">
+              {columns.map((heading, columnIndex) => (
+                <th
+                  key={`${heading || 'actions'}-${columnIndex}`}
+                  className={cn(
+                    'border border-slate-400 px-2 py-2 font-semibold uppercase tracking-wide',
+                    canManagerEdit && columnIndex === columns.length - 1 && 'no-jpeg-export no-print',
+                  )}
+                >
                   {heading}
                 </th>
               ))}
@@ -187,7 +203,12 @@ export function OfficialTimesheetForm({
                       <td className="border border-slate-400 px-2 py-2">{item.inchargeName || ''}</td>
                       <td className="border border-slate-400 px-2 py-1">
                         {displaySignPath(item) ? (
-                          <img src={fileUrl(displaySignPath(item))} alt="Admin signature" className="h-8 max-w-[120px] object-contain" />
+                          <img
+                            src={fileUrl(displaySignPath(item))}
+                            alt="Admin signature"
+                            crossOrigin="anonymous"
+                            className="h-8 max-w-[120px] object-contain"
+                          />
                         ) : (
                           ''
                         )}
@@ -196,7 +217,7 @@ export function OfficialTimesheetForm({
                   )}
                   <td className="border border-slate-400 px-2 py-2">{item.remarks || ''}</td>
                   {canManagerEdit && (
-                    <td className="border border-slate-400 px-2 py-2">
+                    <td className="no-jpeg-export no-print border border-slate-400 px-2 py-2">
                       {href && (
                         <button
                           type="button"
@@ -220,13 +241,15 @@ export function OfficialTimesheetForm({
                   <td className="border border-slate-400 px-2 py-2 uppercase" colSpan={2}>Totals</td>
                   <td className="border border-slate-400 px-2 py-2">{formatClockHours(hoursTotal)}</td>
                   <td className="border border-slate-400 px-2 py-2" colSpan={isAdminSheet ? 2 : 3} />
+                  {canManagerEdit && <td className="no-jpeg-export no-print border border-slate-400 px-2 py-2" />}
                 </>
               ) : (
                 <>
                   <td className="border border-slate-400 px-2 py-2" colSpan={4} />
                   <td className="border border-slate-400 px-2 py-2 uppercase">Totals</td>
                   <td className="border border-slate-400 px-2 py-2">{formatClockHours(hoursTotal)}</td>
-                  <td className="border border-slate-400 px-2 py-2" colSpan={isAdminSheet ? (canManagerEdit ? 5 : 4) : (canManagerEdit ? 6 : 5)} />
+                  <td className="border border-slate-400 px-2 py-2" colSpan={isAdminSheet ? 4 : 5} />
+                  {canManagerEdit && <td className="no-jpeg-export no-print border border-slate-400 px-2 py-2" />}
                 </>
               )}
             </tr>
@@ -242,6 +265,7 @@ export function OfficialTimesheetForm({
               <img
                 src={fileUrl(items.find((item) => item.careHomeSignaturePath)!.careHomeSignaturePath)}
                 alt="Care Home In-Charge Signature"
+                crossOrigin="anonymous"
                 className="mt-1 h-12 max-w-[180px] object-contain"
               />
               {items.find((item) => item.careHomeSignaturePath)?.inchargeName && (
@@ -257,6 +281,7 @@ export function OfficialTimesheetForm({
               <img
                 src={fileUrl(items.find((item) => item.adminSignaturePath)!.adminSignaturePath)}
                 alt="Admin signature"
+                crossOrigin="anonymous"
                 className="mt-1 h-12 max-w-[180px] object-contain"
               />
               {adminName && <p className="mt-1 text-xs text-slate-600">Signed by {adminName}</p>}

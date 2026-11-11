@@ -31,7 +31,7 @@ export function Button({
       disabled={loading || disabled}
       {...props}
     >
-      {loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />}
+      {loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent opacity-80" aria-hidden />}
       {children}
     </button>
   );

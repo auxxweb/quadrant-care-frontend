@@ -65,3 +65,13 @@ button {
     break-inside: avoid;
   }
 }
+
+html.exporting-jpeg .no-jpeg-export,
+html.exporting-jpeg .no-print {
+  display: none !important;
+}
+
+html.exporting-jpeg .official-timesheet,
+html.exporting-jpeg .print-sheet {
+  box-shadow: none !important;
+}

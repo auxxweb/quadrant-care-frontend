@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -10,6 +10,7 @@ import { useAuth } from '../store/auth';
 import { useProductivePanel } from '../hooks/useMetricsFocus';
 import { calculateShiftDuration, fileUrl } from '../utils';
 import { downloadWithToast, saveAxiosBlob } from '../utils/download';
+import { exportTimesheetSheetsAsJpeg } from '../utils/timesheetJpeg';
 import type { Timesheet } from '../types';
 
 export function TimesheetDetailPage() {
@@ -167,6 +168,8 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
   }
 
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [jpegLoading, setJpegLoading] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
 
   async function downloadPdf() {
     setPdfLoading(true);
@@ -177,12 +180,25 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
     setPdfLoading(false);
   }
 
+  async function downloadJpeg() {
+    setJpegLoading(true);
+    await downloadWithToast(async () => {
+      const root = sheetRef.current;
+      if (!root) throw new Error('Timesheet preview is not ready yet.');
+      await exportTimesheetSheetsAsJpeg([root], data.timesheetId || 'timesheet');
+    }, 'JPEG downloaded.');
+    setJpegLoading(false);
+  }
+
   return (
     <div className="space-y-5">
-      <TimesheetPreview item={data} />
+      <div ref={sheetRef}>
+        <TimesheetPreview item={data} />
+      </div>
       <div className="no-print flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Button variant="secondary" onClick={() => window.print()}>Print</Button>
         <Button variant="secondary" loading={pdfLoading} onClick={downloadPdf}>Download PDF</Button>
+        <Button variant="secondary" loading={jpegLoading} onClick={downloadJpeg}>Download JPEG</Button>
         {managerCanEditHours && (
           <Button variant="accent" onClick={openHoursModal}>Edit hours & break</Button>
         )}
