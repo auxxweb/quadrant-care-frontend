@@ -74,6 +74,7 @@ export default function App() {
         <Route path="/super-admin/profile" element={<ProfilePage />} />
         <Route path="/super-admin/more" element={<MorePage items={[
           { to: '/super-admin/inbox', label: 'Inbox' },
+          { to: '/super-admin/timesheets', label: 'Timesheets' },
           { to: '/super-admin/admins', label: 'Admins' },
           { to: '/super-admin/care-homes', label: 'Care Homes' },
           { to: '/super-admin/job-roles', label: 'Job Roles' },
