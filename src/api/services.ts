@@ -76,12 +76,17 @@ export const timesheetApi = {
   reject: (id: string, payload: object) => api.post(`/timesheets/${id}/super-admin-reject`, payload).then((r) => r.data),
   pdfUrl: (id: string) => `${API_BASE_URL}/timesheets/${id}/pdf`,
   downloadPdf: (id: string) =>
-    api.get(`/timesheets/${id}/pdf`, { responseType: 'blob', skipToast: true } as never),
+    api.get(`/timesheets/${id}/pdf`, {
+      responseType: 'blob',
+      skipToast: true,
+      timeout: 90_000,
+    } as never),
   downloadExport: (params: Record<string, string | undefined>, format: 'csv' | 'pdf') =>
     api.get('/timesheets/export', {
       params: { ...params, format },
       responseType: 'blob',
       skipToast: true,
+      timeout: format === 'pdf' ? 90_000 : 60_000,
     } as never),
   weekly: (params?: object) => api.get('/timesheets/summary/weekly', { params }).then((r) => r.data),
   monthly: (params?: object) => api.get('/timesheets/summary/monthly', { params }).then((r) => r.data),

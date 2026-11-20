@@ -54,8 +54,13 @@ export async function downloadWithToast(action: () => Promise<void>, successMess
     await action();
     toast.success(successMessage);
   } catch (error) {
-    const err = error as { message?: string; response?: { data?: Blob | { message?: string } } };
+    const err = error as {
+      code?: string;
+      message?: string;
+      response?: { status?: number; data?: Blob | { message?: string } };
+    };
     let message = err?.message || 'Download failed.';
+    const status = err?.response?.status;
     const data = err?.response?.data;
     if (data instanceof Blob) {
       try {
@@ -66,6 +71,15 @@ export async function downloadWithToast(action: () => Promise<void>, successMess
       }
     } else if (data && typeof data === 'object' && data.message) {
       message = data.message;
+    }
+    if (err?.code === 'ECONNABORTED' || message.toLowerCase().includes('timeout')) {
+      message = 'The download timed out. Narrow the date range or filters and try again, or use CSV export.';
+    } else if (status === 429) {
+      message = message.includes('PDF')
+        ? message
+        : 'A PDF export is already in progress. Please wait a moment and try again.';
+    } else if (!err?.response && (message === 'Network Error' || /cors/i.test(message))) {
+      message = 'Could not reach the server. If PDF export just failed on a large set, wait a moment and try again with a narrower date range.';
     }
     toast.error(message);
   }
