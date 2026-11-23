@@ -1,17 +1,40 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { timesheetApi } from '../api/services';
 import { TimesheetPreview } from '../components/timesheet/TimesheetPreview';
 import { SignaturePad } from '../components/timesheet/SignaturePad';
-import { Button, Input, Modal, Skeleton, TimeInput } from '../components/ui';
+import { CareHomeSelect } from '../components/timesheet/CareHomeSelect';
+import { Button, ConfirmDialog, Input, Modal, Select, Skeleton, TimeInput } from '../components/ui';
 import { useAuth } from '../store/auth';
 import { useProductivePanel } from '../hooks/useMetricsFocus';
-import { calculateShiftDuration, fileUrl } from '../utils';
+import {
+  calculateShiftDuration,
+  employeeJobRoles,
+  employeePrimaryJobRole,
+  fileUrl,
+  toInputDate,
+} from '../utils';
 import { downloadWithToast, saveAxiosBlob } from '../utils/download';
 import { exportTimesheetSheetsAsJpeg } from '../utils/timesheetJpeg';
 import type { Timesheet } from '../types';
+
+const STAFF_WITHDRAW_STATUSES = ['SUBMITTED', 'ADMIN_REVIEW', 'RESUBMITTED', 'SUPER_ADMIN_REVIEW'];
+
+function listPathForRole(role?: string) {
+  if (role === 'ADMIN') return '/admin/timesheets';
+  if (role === 'SUPER_ADMIN') return '/super-admin/timesheets';
+  return '/staff/timesheets';
+}
+
+function toEditDate(value: string) {
+  try {
+    return toInputDate(new Date(value));
+  } catch {
+    return String(value).slice(0, 10);
+  }
+}
 
 export function TimesheetDetailPage() {
   const { id = '' } = useParams();
@@ -21,7 +44,8 @@ export function TimesheetDetailPage() {
 }
 
 function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
-  const { user } = useAuth();
+  const { user, employee } = useAuth();
+  const navigate = useNavigate();
   const productivePanel = useProductivePanel();
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -31,11 +55,19 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
   const [remarks, setRemarks] = useState('');
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState('');
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [voidReason, setVoidReason] = useState('');
   const [hoursModalOpen, setHoursModalOpen] = useState(searchParams.get('edit') === 'hours');
+  const assignedRoles = employeeJobRoles(employee);
+  const primaryRole = employeePrimaryJobRole(employee);
   const [edit, setEdit] = useState({
+    date: toEditDate(data.date),
     startTime: data.startTime,
     endTime: data.endTime,
     breakDuration: data.breakDuration,
+    careHomeId: data.careHomeId ?? '',
+    jobRoleId: data.jobRoleId ?? primaryRole?._id ?? '',
     inchargeName: data.inchargeName ?? '',
     remarks: data.remarks ?? '',
   });
@@ -52,24 +84,101 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
       breakDuration: data.breakDuration,
     });
     setEdit({
+      date: toEditDate(data.date),
       startTime: data.startTime,
       endTime: data.endTime,
       breakDuration: data.breakDuration,
+      careHomeId: data.careHomeId ?? '',
+      jobRoleId: data.jobRoleId ?? primaryRole?._id ?? '',
       inchargeName: data.inchargeName ?? '',
       remarks: data.remarks ?? '',
     });
-  }, [data.startTime, data.endTime, data.breakDuration, data.inchargeName, data.remarks]);
+  }, [
+    data.date,
+    data.startTime,
+    data.endTime,
+    data.breakDuration,
+    data.careHomeId,
+    data.jobRoleId,
+    data.inchargeName,
+    data.remarks,
+    primaryRole?._id,
+  ]);
 
   useEffect(() => {
     setHoursModalOpen(searchParams.get('edit') === 'hours');
   }, [searchParams]);
+
+  const isOwn = Boolean(user?.id && data.userId && String(user.id) === String(data.userId));
+  const isDraft = data.status === 'DRAFT';
+  const isRejected = data.status === 'ADMIN_REJECTED' || data.status === 'SUPER_ADMIN_REJECTED';
+  const ownerCanEdit = (user?.role === 'STAFF' || (user?.role === 'ADMIN' && isOwn)) && data.status !== 'APPROVED';
+  const isStaffSheet = data.ownerRole !== 'ADMIN';
+  const missingCareHomeSignature = isStaffSheet && !data.careHomeSignaturePath && !careHomeSignature;
+  const ownerCanWithdraw = Boolean(
+    isOwn
+    && (user?.role === 'STAFF' || user?.role === 'ADMIN')
+    && (
+      data.ownerRole === 'ADMIN'
+        ? data.status === 'SUPER_ADMIN_REVIEW'
+        : STAFF_WITHDRAW_STATUSES.includes(data.status)
+    ),
+  );
+  const ownerCanDelete = ownerCanEdit;
+  const superCanDelete = user?.role === 'SUPER_ADMIN';
+  const canDelete = ownerCanDelete || superCanDelete;
+  const managerCanEditHours = Boolean(
+    !productivePanel
+    && isStaffSheet
+    && data.status !== 'APPROVED'
+    && user
+    && (user.role === 'SUPER_ADMIN' || (user.role === 'ADMIN' && !isOwn)),
+  );
+  const adminCanReview = user?.role === 'ADMIN' && !isOwn && data.ownerRole !== 'ADMIN' && ['SUBMITTED', 'ADMIN_REVIEW', 'RESUBMITTED'].includes(data.status);
+  const superCanApprove = user?.role === 'SUPER_ADMIN' && (
+    ['SUPER_ADMIN_REVIEW', 'ADMIN_VERIFIED'].includes(data.status)
+    || (data.ownerRole === 'ADMIN' && ['SUBMITTED', 'ADMIN_REVIEW', 'RESUBMITTED'].includes(data.status))
+  );
+
+  function buildUpdatePayload() {
+    return {
+      date: edit.date,
+      startTime: edit.startTime,
+      endTime: edit.endTime,
+      breakDuration: Number(edit.breakDuration || 0),
+      careHomeId: edit.careHomeId,
+      ...(isStaffSheet && edit.jobRoleId ? { jobRoleId: edit.jobRoleId } : {}),
+      inchargeName: edit.inchargeName,
+      remarks: edit.remarks,
+      ...(careHomeSignature ? { careHomeSignature } : {}),
+    };
+  }
+
+  function assertEditValid() {
+    try {
+      calculateShiftDuration(edit.startTime, edit.endTime, Number(edit.breakDuration || 0));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'A shift must be less than 24 hours in a day.';
+      toast.error(message);
+      throw error;
+    }
+    if (!edit.careHomeId) {
+      toast.error('Select a care home.');
+      throw new Error('Select a care home.');
+    }
+    if (isStaffSheet && assignedRoles.length > 1 && !edit.jobRoleId) {
+      toast.error('Select a job role.');
+      throw new Error('Select a job role.');
+    }
+  }
 
   const submit = useMutation({
     mutationFn: async () => {
       if (careHomeSignature) await timesheetApi.update(id, { careHomeSignature });
       return timesheetApi.submit(id);
     },
-    onSuccess: () => { toast.success('Timesheet submitted successfully.'); qc.invalidateQueries(); } });
+    onSuccess: () => { toast.success('Timesheet submitted successfully.'); qc.invalidateQueries(); },
+  });
   const verify = useMutation({
     mutationFn: () => timesheetApi.adminVerify(id, {
       remarks,
@@ -85,21 +194,51 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
     mutationFn: () => (user?.role === 'ADMIN' ? timesheetApi.adminReject(id, { reason }) : timesheetApi.reject(id, { reason })),
     onSuccess: () => { toast.success('Timesheet rejected.'); setRejectOpen(false); qc.invalidateQueries(); },
   });
-  const saveCorrection = useMutation({
+  const saveDraft = useMutation({
     mutationFn: async () => {
-      try {
-        calculateShiftDuration(edit.startTime, edit.endTime, Number(edit.breakDuration || 0));
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'A shift must be less than 24 hours in a day.';
-        toast.error(message);
-        throw error;
+      assertEditValid();
+      return timesheetApi.update(id, buildUpdatePayload());
+    },
+    onSuccess: () => {
+      toast.success(isDraft ? 'Draft saved.' : 'Changes saved.');
+      setCareHomeSignature('');
+      qc.invalidateQueries();
+    },
+  });
+  const resubmit = useMutation({
+    mutationFn: async () => {
+      assertEditValid();
+      if (isStaffSheet && missingCareHomeSignature) {
+        toast.error('Care Home In-Charge Signature is required.');
+        throw new Error('Signature required');
       }
-      await timesheetApi.update(id, careHomeSignature ? { ...edit, careHomeSignature } : edit);
-      await timesheetApi.submit(id);
+      await timesheetApi.update(id, buildUpdatePayload());
+      return timesheetApi.submit(id);
     },
     onSuccess: () => {
       toast.success('Timesheet submitted successfully.');
+      setCareHomeSignature('');
       qc.invalidateQueries();
+    },
+  });
+  const withdraw = useMutation({
+    mutationFn: () => timesheetApi.withdraw(id),
+    onSuccess: () => {
+      toast.success('Timesheet returned to draft.');
+      setWithdrawOpen(false);
+      qc.invalidateQueries();
+    },
+  });
+  const remove = useMutation({
+    mutationFn: () => timesheetApi.remove(
+      id,
+      data.status === 'APPROVED' && superCanDelete ? { reason: voidReason.trim() } : undefined,
+    ),
+    onSuccess: () => {
+      toast.success(data.status === 'APPROVED' ? 'Approved timesheet voided.' : 'Timesheet deleted.');
+      setDeleteOpen(false);
+      qc.invalidateQueries({ queryKey: ['timesheets'] });
+      navigate(listPathForRole(user?.role));
     },
   });
   const saveHours = useMutation({
@@ -121,27 +260,18 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
     },
   });
 
-  const isOwn = Boolean(user?.id && data.userId && String(user.id) === String(data.userId));
-  const ownerCanEdit = (user?.role === 'STAFF' || (user?.role === 'ADMIN' && isOwn)) && ['DRAFT', 'ADMIN_REJECTED', 'SUPER_ADMIN_REJECTED'].includes(data.status);
-  const isStaffSheet = data.ownerRole !== 'ADMIN';
-  const missingCareHomeSignature = isStaffSheet && !data.careHomeSignaturePath && !careHomeSignature;
-  const managerCanEditHours = Boolean(
-    !productivePanel
-    && isStaffSheet
-    && user
-    && (user.role === 'SUPER_ADMIN' || (user.role === 'ADMIN' && !isOwn)),
-  );
-  const adminCanReview = user?.role === 'ADMIN' && !isOwn && data.ownerRole !== 'ADMIN' && ['SUBMITTED', 'ADMIN_REVIEW', 'RESUBMITTED'].includes(data.status);
-  const superCanApprove = user?.role === 'SUPER_ADMIN' && (
-    ['SUPER_ADMIN_REVIEW', 'ADMIN_VERIFIED'].includes(data.status)
-    || (data.ownerRole === 'ADMIN' && ['SUBMITTED', 'ADMIN_REVIEW', 'RESUBMITTED'].includes(data.status))
-  );
-
   let previewHours = '—';
   try {
     previewHours = calculateShiftDuration(hoursEdit.startTime, hoursEdit.endTime, Number(hoursEdit.breakDuration || 0)).formattedHours;
   } catch {
     previewHours = 'Invalid';
+  }
+
+  let editPreviewHours = '—';
+  try {
+    editPreviewHours = calculateShiftDuration(edit.startTime, edit.endTime, Number(edit.breakDuration || 0)).formattedHours;
+  } catch {
+    editPreviewHours = 'Invalid';
   }
 
   function openHoursModal() {
@@ -190,6 +320,9 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
     setJpegLoading(false);
   }
 
+  const voidNeedsReason = data.status === 'APPROVED' && superCanDelete;
+  const deleteConfirmDisabled = voidNeedsReason && voidReason.trim().length < 3;
+
   return (
     <div className="space-y-5">
       <div ref={sheetRef}>
@@ -202,19 +335,50 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
         {managerCanEditHours && (
           <Button variant="accent" onClick={openHoursModal}>Edit hours & break</Button>
         )}
-        {ownerCanEdit && data.status === 'DRAFT' && (
+        {ownerCanWithdraw && (
+          <Button variant="secondary" onClick={() => setWithdrawOpen(true)}>Withdraw to draft</Button>
+        )}
+        {ownerCanEdit && isDraft && (
           <Button variant="accent" disabled={missingCareHomeSignature} loading={submit.isPending} onClick={() => submit.mutate()}>Submit</Button>
+        )}
+        {canDelete && (
+          <Button variant="danger" onClick={() => { setVoidReason(''); setDeleteOpen(true); }}>
+            {voidNeedsReason ? 'Void timesheet' : 'Delete'}
+          </Button>
         )}
       </div>
       {ownerCanEdit && (
         <div className="card space-y-4 p-5">
-          <h3 className="text-lg font-semibold">Correct timesheet</h3>
+          <h3 className="text-lg font-semibold">
+            {isRejected ? 'Correct timesheet' : isDraft ? 'Edit draft' : 'Edit timesheet'}
+          </h3>
           {data.rejectionReason && <p className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">Rejection reason: {data.rejectionReason}</p>}
+          <Input label="Date" type="date" value={edit.date} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdit((v) => ({ ...v, date: e.target.value }))} />
           <div className="grid grid-cols-2 gap-3">
             <TimeInput label="Start" value={edit.startTime} onChange={(value) => setEdit((v) => ({ ...v, startTime: value }))} />
             <TimeInput label="End" value={edit.endTime} onChange={(value) => setEdit((v) => ({ ...v, endTime: value }))} />
           </div>
           <Input label="Break (minutes)" type="number" min={0} value={edit.breakDuration} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdit((v) => ({ ...v, breakDuration: Number(e.target.value) }))} />
+          <div className="rounded-2xl bg-slate-50 p-3 text-sm dark:bg-slate-800">
+            <span className="text-slate-500">Total hours: </span>
+            <span className="font-semibold">{editPreviewHours}</span>
+          </div>
+          <CareHomeSelect
+            value={edit.careHomeId}
+            onChange={(e) => setEdit((v) => ({ ...v, careHomeId: e.target.value }))}
+          />
+          {isStaffSheet && assignedRoles.length > 1 && (
+            <Select
+              label="Job role"
+              value={edit.jobRoleId}
+              onChange={(e) => setEdit((v) => ({ ...v, jobRoleId: e.target.value }))}
+            >
+              <option value="">Select a job role</option>
+              {assignedRoles.map((role) => (
+                <option key={role._id} value={role._id}>{role.name}</option>
+              ))}
+            </Select>
+          )}
           {data.ownerRole === 'ADMIN' ? (
             <Input label="Incharge / supervisor" value={edit.inchargeName || 'Super Admin'} readOnly />
           ) : (
@@ -232,7 +396,27 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
               <SignaturePad value={careHomeSignature} onChange={setCareHomeSignature} />
             </div>
           )}
-          <Button variant="accent" className="w-full" disabled={missingCareHomeSignature} loading={saveCorrection.isPending} onClick={() => saveCorrection.mutate()}>Resubmit timesheet</Button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              loading={saveDraft.isPending}
+              onClick={() => saveDraft.mutate()}
+            >
+              {isDraft ? 'Save draft' : 'Save changes'}
+            </Button>
+            {isRejected && (
+              <Button
+                variant="accent"
+                className="flex-1"
+                disabled={missingCareHomeSignature}
+                loading={resubmit.isPending}
+                onClick={() => resubmit.mutate()}
+              >
+                Resubmit
+              </Button>
+            )}
+          </div>
         </div>
       )}
       {adminCanReview && (
@@ -304,6 +488,42 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
       <Modal open={rejectOpen} title="Reject timesheet" onClose={() => setRejectOpen(false)}>
         <Input label="Rejection reason" value={reason} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReason(e.target.value)} />
         <Button className="mt-4 w-full" variant="danger" disabled={reason.length < 3} onClick={() => reject.mutate()}>Reject</Button>
+      </Modal>
+      <ConfirmDialog
+        open={withdrawOpen}
+        title="Withdraw timesheet"
+        description="Return this timesheet to draft so you can edit or delete it? Approvers will no longer see it in their queue."
+        confirmLabel="Withdraw"
+        onClose={() => setWithdrawOpen(false)}
+        onConfirm={() => withdraw.mutate()}
+      />
+      <Modal open={deleteOpen} title={voidNeedsReason ? 'Void approved timesheet' : 'Delete timesheet'} onClose={() => setDeleteOpen(false)}>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          {voidNeedsReason
+            ? `Void ${data.timesheetId}? This permanently removes an approved timesheet and cannot be undone.`
+            : `Delete ${data.timesheetId}? This cannot be undone.`}
+        </p>
+        {voidNeedsReason && (
+          <div className="mt-4">
+            <Input
+              label="Reason"
+              value={voidReason}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVoidReason(e.target.value)}
+            />
+          </div>
+        )}
+        <div className="mt-5 flex gap-3">
+          <Button variant="secondary" className="flex-1" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+          <Button
+            variant="danger"
+            className="flex-1"
+            disabled={deleteConfirmDisabled}
+            loading={remove.isPending}
+            onClick={() => remove.mutate()}
+          >
+            {voidNeedsReason ? 'Void' : 'Delete'}
+          </Button>
+        </div>
       </Modal>
     </div>
   );

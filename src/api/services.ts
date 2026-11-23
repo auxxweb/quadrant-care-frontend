@@ -70,6 +70,9 @@ export const timesheetApi = {
   editHours: (id: string, payload: { startTime?: string; endTime?: string; breakDuration?: number }) =>
     api.patch(`/timesheets/${id}/hours`, payload).then((r) => r.data as Timesheet),
   submit: (id: string) => api.post(`/timesheets/${id}/submit`).then((r) => r.data),
+  withdraw: (id: string) => api.post(`/timesheets/${id}/withdraw`).then((r) => r.data as Timesheet),
+  remove: (id: string, payload?: { reason?: string }) =>
+    api.delete(`/timesheets/${id}`, { data: payload ?? {} }).then((r) => r.data),
   adminVerify: (id: string, payload: object) => api.post(`/timesheets/${id}/admin-verify`, payload).then((r) => r.data),
   adminReject: (id: string, payload: object) => api.post(`/timesheets/${id}/admin-reject`, payload).then((r) => r.data),
   approve: (id: string, payload?: object) => api.post(`/timesheets/${id}/super-admin-approve`, payload ?? {}).then((r) => r.data),

@@ -59,6 +59,7 @@ export interface Timesheet {
   employeeId?: string;
   userId?: string;
   ownerRole?: 'STAFF' | 'ADMIN';
+  careHomeId?: string;
   jobRoleId?: string;
   employeeSnapshot: { name: string; employeeId: string; email?: string; mobile?: string };
   careHomeSnapshot: { name: string };

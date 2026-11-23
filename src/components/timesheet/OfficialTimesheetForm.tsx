@@ -35,12 +35,18 @@ export function OfficialTimesheetForm({
   const primary = items[0];
   if (!primary) return null;
 
-  const canManagerEdit = Boolean(
+  const canManagerEditColumn = Boolean(
     !productivePanel
     && user
     && primary.ownerRole !== 'ADMIN'
     && (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN'),
   );
+
+  function canEditHoursFor(item: (typeof items)[number]) {
+    if (!canManagerEditColumn || item.status === 'APPROVED') return false;
+    if (user?.role === 'ADMIN' && user.id && item.userId && String(user.id) === String(item.userId)) return false;
+    return true;
+  }
 
   const totalMinutes = items.reduce((sum, item) => sum + (item.totalMinutes || 0), 0);
   const totalProductiveMinutes = items.reduce((sum, item) => sum + (item.productiveMinutes || 0), 0);
@@ -76,7 +82,7 @@ export function OfficialTimesheetForm({
         'INCHARGE',
         'ADMIN SIGN',
         'Remarks',
-        ...(canManagerEdit ? [''] : []),
+        ...(canManagerEditColumn ? [''] : []),
       ];
   const showApprovals = showReviewDetails && Boolean(
     signed || adminName || adminRemarks || superName || superRemarks || rejection,
@@ -161,7 +167,7 @@ export function OfficialTimesheetForm({
                   key={`${heading || 'actions'}-${columnIndex}`}
                   className={cn(
                     'border border-slate-400 px-2 py-2 font-semibold uppercase tracking-wide',
-                    canManagerEdit && columnIndex === columns.length - 1 && 'no-jpeg-export no-print',
+                    canManagerEditColumn && columnIndex === columns.length - 1 && 'no-jpeg-export no-print',
                   )}
                 >
                   {heading}
@@ -216,9 +222,9 @@ export function OfficialTimesheetForm({
                     </>
                   )}
                   <td className="border border-slate-400 px-2 py-2">{item.remarks || ''}</td>
-                  {canManagerEdit && (
+                  {canManagerEditColumn && (
                     <td className="no-jpeg-export no-print border border-slate-400 px-2 py-2">
-                      {href && (
+                      {href && canEditHoursFor(item) && (
                         <button
                           type="button"
                           className="font-semibold text-brand-600 hover:underline"
@@ -241,7 +247,7 @@ export function OfficialTimesheetForm({
                   <td className="border border-slate-400 px-2 py-2 uppercase" colSpan={2}>Totals</td>
                   <td className="border border-slate-400 px-2 py-2">{formatClockHours(hoursTotal)}</td>
                   <td className="border border-slate-400 px-2 py-2" colSpan={isAdminSheet ? 2 : 3} />
-                  {canManagerEdit && <td className="no-jpeg-export no-print border border-slate-400 px-2 py-2" />}
+                  {canManagerEditColumn && <td className="no-jpeg-export no-print border border-slate-400 px-2 py-2" />}
                 </>
               ) : (
                 <>
@@ -249,7 +255,7 @@ export function OfficialTimesheetForm({
                   <td className="border border-slate-400 px-2 py-2 uppercase">Totals</td>
                   <td className="border border-slate-400 px-2 py-2">{formatClockHours(hoursTotal)}</td>
                   <td className="border border-slate-400 px-2 py-2" colSpan={isAdminSheet ? 4 : 5} />
-                  {canManagerEdit && <td className="no-jpeg-export no-print border border-slate-400 px-2 py-2" />}
+                  {canManagerEditColumn && <td className="no-jpeg-export no-print border border-slate-400 px-2 py-2" />}
                 </>
               )}
             </tr>
