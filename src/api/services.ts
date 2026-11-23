@@ -18,7 +18,6 @@ export const authApi = {
   signupOptions: () => api.get('/auth/signup-options').then((r) => r.data as {
     staffSignupEnabled: boolean;
     jobRoles: { _id: string; name: string }[];
-    careHomes: { _id: string; name: string; city: string }[];
   }),
   signup: (payload: object) => api.post('/auth/signup', payload).then((r) => r.data),
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }).then((r) => r.data),

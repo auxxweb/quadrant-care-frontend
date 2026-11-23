@@ -30,7 +30,6 @@ export interface Employee {
   loginEnabled: boolean;
   jobRoleIds: Array<JobRole | string>;
   primaryJobRoleId: JobRole | string;
-  careHomeId?: CareHome | string;
 }
 
 export interface CareHome {

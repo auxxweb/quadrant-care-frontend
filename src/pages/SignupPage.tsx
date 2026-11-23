@@ -24,7 +24,6 @@ export function StaffSignupForm({ onBack }: { onBack: () => void }) {
   const [jobRoleIds, setJobRoleIds] = useState<string[]>([]);
   const [primaryJobRoleId, setPrimaryJobRoleId] = useState('');
   const [jobRoleError, setJobRoleError] = useState('');
-  const [careHomeId, setCareHomeId] = useState('');
   const [joiningDate, setJoiningDate] = useState(todayIso());
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -34,11 +33,10 @@ export function StaffSignupForm({ onBack }: { onBack: () => void }) {
   const [options, setOptions] = useState<{
     staffSignupEnabled: boolean;
     jobRoles: { _id: string; name: string }[];
-    careHomes: { _id: string; name: string; city: string }[];
   } | null>(null);
 
   useEffect(() => {
-    authApi.signupOptions().then(setOptions).catch(() => setOptions({ staffSignupEnabled: false, jobRoles: [], careHomes: [] }));
+    authApi.signupOptions().then(setOptions).catch(() => setOptions({ staffSignupEnabled: false, jobRoles: [] }));
   }, []);
 
   const pickerRoles = useMemo<JobRole[]>(
@@ -71,7 +69,6 @@ export function StaffSignupForm({ onBack }: { onBack: () => void }) {
         password,
         jobRoleIds,
         primaryJobRoleId: primaryJobRoleId || jobRoleIds[0],
-        careHomeId,
         joiningDate,
         passcode: passcode || undefined,
       });
@@ -125,21 +122,9 @@ export function StaffSignupForm({ onBack }: { onBack: () => void }) {
           setJobRoleError(nextIds.length ? '' : 'Select at least one job role.');
         }}
       />
-      <AuthField label="Care home" htmlFor="signup-home">
-        <select id="signup-home" value={careHomeId} onChange={(e) => setCareHomeId(e.target.value)} required className={authControlClass}>
-          <option value="">{options ? 'Select care home' : 'Loading care homes…'}</option>
-          {(options?.careHomes ?? []).map((home) => (
-            <option key={home._id} value={home._id}>{home.city ? `${home.name} — ${home.city}` : home.name}</option>
-          ))}
-        </select>
-      </AuthField>
-      {options && (!options.jobRoles.length || !options.careHomes.length) && (
+      {options && !options.jobRoles.length && (
         <p className="rounded-2xl bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-          {!options.jobRoles.length && !options.careHomes.length
-            ? 'Job roles and care homes have not been set up yet. Ask Super Admin to add them first.'
-            : !options.jobRoles.length
-              ? 'No job roles are available yet. Ask Super Admin to add one first.'
-              : 'No care homes are available yet. Ask Super Admin to add one first.'}
+          No job roles are available yet. Ask Super Admin to add one first.
         </p>
       )}
       <AuthField label="Joining date" htmlFor="signup-joined">

@@ -14,7 +14,6 @@ export interface AuthState {
     password: string;
     jobRoleIds: string[];
     primaryJobRoleId?: string;
-    careHomeId: string;
     joiningDate?: string;
     passcode?: string;
   }) => Promise<AuthUser>;
