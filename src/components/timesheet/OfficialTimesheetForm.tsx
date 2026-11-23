@@ -44,7 +44,12 @@ export function OfficialTimesheetForm({
 
   function canEditHoursFor(item: (typeof items)[number]) {
     if (!canManagerEditColumn || item.status === 'APPROVED') return false;
-    if (user?.role === 'ADMIN' && user.id && item.userId && String(user.id) === String(item.userId)) return false;
+    const ownerId = typeof item.userId === 'string'
+      ? item.userId
+      : item.userId && typeof item.userId === 'object' && '_id' in (item.userId as object)
+        ? String((item.userId as { _id: string })._id)
+        : String(item.userId ?? '');
+    if (user?.role === 'ADMIN' && user.id && ownerId && String(user.id) === ownerId) return false;
     return true;
   }
 

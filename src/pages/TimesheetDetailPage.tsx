@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { timesheetApi } from '../api/services';
+import { employeeApi, timesheetApi } from '../api/services';
 import { TimesheetPreview } from '../components/timesheet/TimesheetPreview';
 import { SignaturePad } from '../components/timesheet/SignaturePad';
 import { CareHomeSelect } from '../components/timesheet/CareHomeSelect';
@@ -26,6 +26,13 @@ function listPathForRole(role?: string) {
   if (role === 'ADMIN') return '/admin/timesheets';
   if (role === 'SUPER_ADMIN') return '/super-admin/timesheets';
   return '/staff/timesheets';
+}
+
+function timesheetUserId(value: unknown) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value && '_id' in value) return String((value as { _id: string })._id);
+  return String(value);
 }
 
 function toEditDate(value: string) {
@@ -59,8 +66,51 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
   const [hoursModalOpen, setHoursModalOpen] = useState(searchParams.get('edit') === 'hours');
-  const assignedRoles = employeeJobRoles(employee);
-  const primaryRole = employeePrimaryJobRole(employee);
+  const isOwn = Boolean(user?.id && timesheetUserId(data.userId) === String(user.id));
+  const isDraft = data.status === 'DRAFT';
+  const isRejected = data.status === 'ADMIN_REJECTED' || data.status === 'SUPER_ADMIN_REJECTED';
+  const isStaffSheet = data.ownerRole !== 'ADMIN';
+  const ownerCanEdit = (user?.role === 'STAFF' || (user?.role === 'ADMIN' && isOwn)) && data.status !== 'APPROVED';
+  const managerCanFullEdit = Boolean(
+    data.status !== 'APPROVED'
+    && user
+    && !isOwn
+    && (
+      (user.role === 'ADMIN' && isStaffSheet)
+      || (user.role === 'SUPER_ADMIN')
+    ),
+  );
+  const canFullEdit = ownerCanEdit || managerCanFullEdit;
+  const missingCareHomeSignature = isStaffSheet && !data.careHomeSignaturePath && !careHomeSignature;
+  const ownerCanWithdraw = Boolean(
+    isOwn
+    && (user?.role === 'STAFF' || user?.role === 'ADMIN')
+    && (
+      data.ownerRole === 'ADMIN'
+        ? data.status === 'SUPER_ADMIN_REVIEW'
+        : STAFF_WITHDRAW_STATUSES.includes(data.status)
+    ),
+  );
+  const ownerCanDelete = ownerCanEdit;
+  const managerCanDelete = managerCanFullEdit;
+  const superCanDelete = user?.role === 'SUPER_ADMIN';
+  const canDelete = ownerCanDelete || managerCanDelete || superCanDelete;
+  const managerCanEditHours = Boolean(
+    !productivePanel
+    && isStaffSheet
+    && data.status !== 'APPROVED'
+    && user
+    && (user.role === 'SUPER_ADMIN' || (user.role === 'ADMIN' && !isOwn)),
+  );
+
+  const staffEmployeeQuery = useQuery({
+    queryKey: ['employee', data.employeeId],
+    queryFn: () => employeeApi.get(data.employeeId!),
+    enabled: Boolean(managerCanFullEdit && data.employeeId),
+  });
+  const roleSourceEmployee = managerCanFullEdit ? (staffEmployeeQuery.data ?? null) : employee;
+  const assignedRoles = employeeJobRoles(roleSourceEmployee);
+  const primaryRole = employeePrimaryJobRole(roleSourceEmployee);
   const [edit, setEdit] = useState({
     date: toEditDate(data.date),
     startTime: data.startTime,
@@ -108,32 +158,6 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
   useEffect(() => {
     setHoursModalOpen(searchParams.get('edit') === 'hours');
   }, [searchParams]);
-
-  const isOwn = Boolean(user?.id && data.userId && String(user.id) === String(data.userId));
-  const isDraft = data.status === 'DRAFT';
-  const isRejected = data.status === 'ADMIN_REJECTED' || data.status === 'SUPER_ADMIN_REJECTED';
-  const ownerCanEdit = (user?.role === 'STAFF' || (user?.role === 'ADMIN' && isOwn)) && data.status !== 'APPROVED';
-  const isStaffSheet = data.ownerRole !== 'ADMIN';
-  const missingCareHomeSignature = isStaffSheet && !data.careHomeSignaturePath && !careHomeSignature;
-  const ownerCanWithdraw = Boolean(
-    isOwn
-    && (user?.role === 'STAFF' || user?.role === 'ADMIN')
-    && (
-      data.ownerRole === 'ADMIN'
-        ? data.status === 'SUPER_ADMIN_REVIEW'
-        : STAFF_WITHDRAW_STATUSES.includes(data.status)
-    ),
-  );
-  const ownerCanDelete = ownerCanEdit;
-  const superCanDelete = user?.role === 'SUPER_ADMIN';
-  const canDelete = ownerCanDelete || superCanDelete;
-  const managerCanEditHours = Boolean(
-    !productivePanel
-    && isStaffSheet
-    && data.status !== 'APPROVED'
-    && user
-    && (user.role === 'SUPER_ADMIN' || (user.role === 'ADMIN' && !isOwn)),
-  );
   const adminCanReview = user?.role === 'ADMIN' && !isOwn && data.ownerRole !== 'ADMIN' && ['SUBMITTED', 'ADMIN_REVIEW', 'RESUBMITTED'].includes(data.status);
   const superCanApprove = user?.role === 'SUPER_ADMIN' && (
     ['SUPER_ADMIN_REVIEW', 'ADMIN_VERIFIED'].includes(data.status)
@@ -347,12 +371,18 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
           </Button>
         )}
       </div>
-      {ownerCanEdit && (
+      {canFullEdit && (
         <div className="card space-y-4 p-5">
           <h3 className="text-lg font-semibold">
-            {isRejected ? 'Correct timesheet' : isDraft ? 'Edit draft' : 'Edit timesheet'}
+            {managerCanFullEdit
+              ? 'Edit timesheet'
+              : isRejected
+                ? 'Correct timesheet'
+                : isDraft
+                  ? 'Edit draft'
+                  : 'Edit timesheet'}
           </h3>
-          {data.rejectionReason && <p className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">Rejection reason: {data.rejectionReason}</p>}
+          {data.rejectionReason && ownerCanEdit && <p className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">Rejection reason: {data.rejectionReason}</p>}
           <Input label="Date" type="date" value={edit.date} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdit((v) => ({ ...v, date: e.target.value }))} />
           <div className="grid grid-cols-2 gap-3">
             <TimeInput label="Start" value={edit.startTime} onChange={(value) => setEdit((v) => ({ ...v, startTime: value }))} />
@@ -390,22 +420,24 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
               <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Care Home In-Charge Signature</p>
               {data.careHomeSignaturePath ? (
                 <p className="text-xs text-slate-500">Already signed. Draw below only to replace the signature.</p>
-              ) : (
+              ) : ownerCanEdit ? (
                 <p className="text-sm text-red-600">A Care Home In-Charge Signature is required before submitting.</p>
+              ) : (
+                <p className="text-xs text-slate-500">Optional: draw below to replace the signature.</p>
               )}
               <SignaturePad value={careHomeSignature} onChange={setCareHomeSignature} />
             </div>
           )}
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button
-              variant="secondary"
+              variant="primary"
               className="flex-1"
               loading={saveDraft.isPending}
               onClick={() => saveDraft.mutate()}
             >
-              {isDraft ? 'Save draft' : 'Save changes'}
+              {ownerCanEdit && isDraft ? 'Save draft' : 'Save changes'}
             </Button>
-            {isRejected && (
+            {ownerCanEdit && isRejected && (
               <Button
                 variant="accent"
                 className="flex-1"
