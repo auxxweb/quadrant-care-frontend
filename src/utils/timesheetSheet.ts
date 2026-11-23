@@ -33,9 +33,24 @@ export function groupTimesheetsByEmployee(items: Timesheet[]) {
   return [...groups.values()].map(sortTimesheets);
 }
 
-export function sheetWeekLabel(items: Timesheet[]) {
-  if (!items.length) return '';
-  const first = items[0].date;
-  const last = items[items.length - 1].date;
-  return `${formatSheetDate(first)} - ${formatSheetDate(last)}`;
+function formatDateKey(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return formatSheetDate(value);
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
+export type SheetDateRange = { from?: string; to?: string };
+
+/**
+ * Period label for a timesheet sheet. When a date-range filter is active, show
+ * the selected range (so gaps with no entries are visible); otherwise fall back
+ * to the first and last entry dates.
+ */
+export function sheetWeekLabel(items: Timesheet[], range?: SheetDateRange) {
+  const first = items[0]?.date;
+  const last = items[items.length - 1]?.date;
+  const start = range?.from ? formatDateKey(range.from) : formatSheetDate(first);
+  const end = range?.to ? formatDateKey(range.to) : formatSheetDate(last);
+  if (!start && !end) return '';
+  return `${start} - ${end}`;
 }

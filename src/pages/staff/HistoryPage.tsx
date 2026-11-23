@@ -72,6 +72,7 @@ export function HistoryPage() {
               key={entries[0].userId || entries[0]._id}
               entries={entries}
               hrefFor={(entry) => `/staff/timesheets/${entry._id}`}
+              range={dates}
             />
           ))}
         </div>

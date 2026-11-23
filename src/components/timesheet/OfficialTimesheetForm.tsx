@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { BrandLogo } from '../brand/BrandLogo';
 import { COMPANY_DETAILS, STATUS_META, type TimesheetStatus } from '../../constants';
 import { displayName, fileUrl, formatTime12h } from '../../utils';
-import { formatClockHours, formatSheetDate, sheetWeekLabel, sortTimesheets } from '../../utils/timesheetSheet';
+import { formatClockHours, formatSheetDate, sheetWeekLabel, sortTimesheets, type SheetDateRange } from '../../utils/timesheetSheet';
 import { cn } from '../../utils';
 import { useAuth } from '../../store/auth';
 import { useProductivePanel } from '../../hooks/useMetricsFocus';
@@ -22,11 +22,14 @@ export function OfficialTimesheetForm({
   hrefFor,
   activeId,
   showReviewDetails = false,
+  range,
 }: {
   entries: Timesheet[];
   hrefFor?: (item: Timesheet) => string;
   activeId?: string;
   showReviewDetails?: boolean;
+  /** Selected date-range filter; shown as the sheet period when set. */
+  range?: SheetDateRange;
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -95,7 +98,7 @@ export function OfficialTimesheetForm({
 
   const exportName = [
     primary.employeeSnapshot?.name,
-    items.length === 1 ? primary.timesheetId : sheetWeekLabel(items),
+    items.length === 1 ? primary.timesheetId : sheetWeekLabel(items, range),
   ]
     .filter(Boolean)
     .join('-');
@@ -132,8 +135,8 @@ export function OfficialTimesheetForm({
             </span>
           )}
           <p>
-            <span className="font-semibold uppercase tracking-wide text-slate-500">Week: </span>
-            {sheetWeekLabel(items)}
+            <span className="font-semibold uppercase tracking-wide text-slate-500">Period: </span>
+            {sheetWeekLabel(items, range)}
           </p>
         </div>
       </div>

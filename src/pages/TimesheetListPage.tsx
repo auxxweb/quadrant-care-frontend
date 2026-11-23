@@ -265,6 +265,7 @@ export function TimesheetListPage({
             key={entries[0].userId || entries[0].employeeId || entries[0]._id}
             entries={entries}
             hrefFor={(entry) => `${basePath}/${entry._id}`}
+            range={dates}
           />
         ))}
       </div>
