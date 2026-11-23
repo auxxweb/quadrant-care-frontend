@@ -19,3 +19,9 @@ export function timesheetDetailPath(role: string | undefined, id: string) {
 export function timesheetNewPath(role: string | undefined) {
   return role === 'ADMIN' ? '/admin/timesheets/new' : '/staff/timesheets/new';
 }
+
+/** Admin / Super Admin form for creating a staff timesheet on behalf of an employee. */
+export function employeeTimesheetNewPath(role: string | undefined, employeeId?: string) {
+  const base = role === 'SUPER_ADMIN' ? '/super-admin/timesheets/new' : '/admin/timesheets/new';
+  return timesheetBrowsePath(base, { for: 'employee', employeeId });
+}

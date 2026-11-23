@@ -158,8 +158,10 @@ function TimesheetDetailBody({ id, data }: { id: string; data: Timesheet }) {
   useEffect(() => {
     setHoursModalOpen(searchParams.get('edit') === 'hours');
   }, [searchParams]);
-  const adminCanReview = user?.role === 'ADMIN' && !isOwn && data.ownerRole !== 'ADMIN' && ['SUBMITTED', 'ADMIN_REVIEW', 'RESUBMITTED'].includes(data.status);
-  const superCanApprove = user?.role === 'SUPER_ADMIN' && (
+  // The admin who created a timesheet on an employee's behalf cannot review it themselves.
+  const isCreator = Boolean(user?.id && data.history?.[0]?.actorId === user.id);
+  const adminCanReview = user?.role === 'ADMIN' && !isOwn && !isCreator && data.ownerRole !== 'ADMIN' && ['SUBMITTED', 'ADMIN_REVIEW', 'RESUBMITTED'].includes(data.status);
+  const superCanApprove = user?.role === 'SUPER_ADMIN' && !isCreator && (
     ['SUPER_ADMIN_REVIEW', 'ADMIN_VERIFIED'].includes(data.status)
     || (data.ownerRole === 'ADMIN' && ['SUBMITTED', 'ADMIN_REVIEW', 'RESUBMITTED'].includes(data.status))
   );

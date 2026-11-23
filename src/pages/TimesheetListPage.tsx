@@ -12,7 +12,7 @@ import { useProductivePanel } from '../hooks/useMetricsFocus';
 import { downloadWithToast, saveAxiosBlob } from '../utils/download';
 import { exportTimesheetSheetsAsJpeg } from '../utils/timesheetJpeg';
 import { formatMinutes } from '../utils';
-import { timesheetNewPath } from '../utils/timesheetLinks';
+import { employeeTimesheetNewPath, timesheetNewPath } from '../utils/timesheetLinks';
 import { groupTimesheetsByEmployee } from '../utils/timesheetSheet';
 
 const STAFF_FILTERS = [
@@ -110,7 +110,10 @@ export function TimesheetListPage({
   });
 
   const isStaff = basePath.includes('/staff/');
-  const canAdd = isStaff || (user?.role === 'ADMIN' && tab === 'mine');
+  const isAdminEmployeesTab =
+    (user?.role === 'ADMIN' && tab === 'employees') || (user?.role === 'SUPER_ADMIN' && tab === 'staff');
+  const canAdd = isStaff || (user?.role === 'ADMIN' && tab === 'mine') || isAdminEmployeesTab;
+  const addPath = isAdminEmployeesTab ? employeeTimesheetNewPath(user?.role) : timesheetNewPath(user?.role);
   const statusFilters = isStaff ? STAFF_FILTERS : tab === 'mine' ? ADMIN_MINE_FILTERS : user?.role === 'SUPER_ADMIN' ? SUPER_FILTERS : ADMIN_FILTERS;
   const items = data?.items ?? [];
   const sheets = groupTimesheetsByEmployee(items);
@@ -182,7 +185,7 @@ export function TimesheetListPage({
               Export CSV
             </Button>
             {canAdd ? (
-              <Link to={timesheetNewPath(user?.role)}><Button variant="accent">Add timesheet</Button></Link>
+              <Link to={addPath}><Button variant="accent">{isAdminEmployeesTab ? 'Add employee timesheet' : 'Add timesheet'}</Button></Link>
             ) : null}
           </div>
         }
@@ -256,7 +259,7 @@ export function TimesheetListPage({
         <EmptyState
           title="No timesheets found."
           description="Try another search, date range or filter."
-          action={canAdd ? <Link to={timesheetNewPath(user?.role)}><Button>Add Timesheet</Button></Link> : null}
+          action={canAdd ? <Link to={addPath}><Button>{isAdminEmployeesTab ? 'Add employee timesheet' : 'Add Timesheet'}</Button></Link> : null}
         />
       )}
       <div ref={sheetsRef} className="space-y-6">

@@ -87,7 +87,7 @@ export interface Timesheet {
   superAdminRemarks?: string;
   superAdminSignaturePath?: string;
   rejectionReason?: string;
-  history?: { status: string; actorName?: string; note?: string; at: string }[];
+  history?: { status: string; actorId?: string; actorName?: string; note?: string; at: string }[];
 }
 
 export interface Paginated<T> {

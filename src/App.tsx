@@ -59,6 +59,7 @@ export default function App() {
         <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
         <Route path="/super-admin/approvals" element={<TimesheetListPage title="Admin requests" basePath="/super-admin/timesheets" defaultStatus="SUBMITTED,ADMIN_REVIEW,RESUBMITTED,SUPER_ADMIN_REVIEW" hideScopeTabs />} />
         <Route path="/super-admin/timesheets" element={<TimesheetListPage title="Timesheets" basePath="/super-admin/timesheets" />} />
+        <Route path="/super-admin/timesheets/new" element={<NewTimesheetPage />} />
         <Route path="/super-admin/timesheets/:id" element={<TimesheetDetailPage />} />
         <Route path="/super-admin/employees" element={<EmployeeListPage basePath="/super-admin/employees" />} />
         <Route path="/super-admin/employees/new" element={<EmployeeFormPage basePath="/super-admin/employees" />} />

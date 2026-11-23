@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { adminApi, timesheetApi } from '../../api/services';
+import { adminApi, employeeApi, timesheetApi } from '../../api/services';
 import { useAuth } from '../../store/auth';
 import { Button, Input, PageHeader, Select, TimeInput } from '../../components/ui';
 import { CareHomeSelect } from '../../components/timesheet/CareHomeSelect';
@@ -44,13 +44,29 @@ export function NewTimesheetPage() {
   const [hoursError, setHoursError] = useState('');
   const [careHomeSignature, setCareHomeSignature] = useState('');
   const [signatureError, setSignatureError] = useState('');
+  const [searchParams] = useSearchParams();
   const isAdmin = user?.role === 'ADMIN';
-  const assignedRoles = employeeJobRoles(employee);
-  const primaryRole = employeePrimaryJobRole(employee);
+  // Admin or Super Admin creating a staff timesheet on behalf of an employee.
+  // Super admins have no timesheets of their own, so it's always on behalf.
+  const onBehalf = (isAdmin && searchParams.get('for') === 'employee') || user?.role === 'SUPER_ADMIN';
+  // Own admin timesheet (no job role / signature, Super Admin as incharge).
+  const adminOwn = isAdmin && !onBehalf;
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(searchParams.get('employeeId') ?? '');
+  const [employeeError, setEmployeeError] = useState('');
+  const employees = useQuery({
+    queryKey: ['employees', 'dropdown'],
+    queryFn: () => employeeApi.list({ limit: 200, status: 'ACTIVE' }),
+    enabled: onBehalf,
+  });
+  const targetEmployee = onBehalf
+    ? employees.data?.items.find((item) => item._id === selectedEmployeeId)
+    : employee;
+  const assignedRoles = employeeJobRoles(targetEmployee);
+  const primaryRole = employeePrimaryJobRole(targetEmployee);
   const directory = useQuery({
     queryKey: ['admins', 'directory'],
     queryFn: adminApi.directory,
-    enabled: isAdmin,
+    enabled: adminOwn,
   });
   const superAdminName = directory.data?.items.find((item) => item.role === 'SUPER_ADMIN')?.name || 'Super Admin';
   const form = useForm<FormValues>({
@@ -59,14 +75,17 @@ export function NewTimesheetPage() {
   });
 
   useEffect(() => {
-    if (isAdmin && superAdminName) form.setValue('inchargeName', superAdminName);
-  }, [isAdmin, superAdminName, form]);
+    if (adminOwn && superAdminName) form.setValue('inchargeName', superAdminName);
+  }, [adminOwn, superAdminName, form]);
 
   useEffect(() => {
-    if (!isAdmin && primaryRole?._id && !form.getValues('jobRoleId')) {
-      form.setValue('jobRoleId', primaryRole._id);
+    if (adminOwn) return;
+    const current = form.getValues('jobRoleId');
+    // Default to the primary role; reset if the chosen employee doesn't have the current role.
+    if (!current || !assignedRoles.some((role) => role._id === current)) {
+      form.setValue('jobRoleId', primaryRole?._id ?? '');
     }
-  }, [isAdmin, primaryRole?._id, form]);
+  }, [adminOwn, primaryRole?._id, selectedEmployeeId, form]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const watch = form.watch();
   useMemo(() => {
@@ -82,20 +101,25 @@ export function NewTimesheetPage() {
   const selectedRole = assignedRoles.find((role) => role._id === watch.jobRoleId) ?? primaryRole;
 
   async function save(values: FormValues, submit: boolean) {
-    const jobRoleId = isAdmin ? undefined : values.jobRoleId || primaryRole?._id;
-    if (!isAdmin && !jobRoleId) {
+    if (onBehalf && !selectedEmployeeId) {
+      setEmployeeError('Select an employee.');
+      return;
+    }
+    const jobRoleId = adminOwn ? undefined : values.jobRoleId || primaryRole?._id;
+    if (!adminOwn && !jobRoleId) {
       toast.error('Select a job role.');
       return;
     }
-    if (!isAdmin && submit && !careHomeSignature) {
+    if (!adminOwn && submit && !careHomeSignature) {
       setSignatureError('Care Home In-Charge Signature is required.');
       return;
     }
     const created = await timesheetApi.create({
       ...values,
       ...(jobRoleId ? { jobRoleId } : {}),
-      inchargeName: isAdmin ? superAdminName : values.inchargeName,
-      ...( !isAdmin && careHomeSignature ? { careHomeSignature } : {}),
+      ...(onBehalf ? { employeeId: selectedEmployeeId } : {}),
+      inchargeName: adminOwn ? superAdminName : values.inchargeName,
+      ...(!adminOwn && careHomeSignature ? { careHomeSignature } : {}),
       submit,
     });
     await qc.invalidateQueries();
@@ -105,8 +129,24 @@ export function NewTimesheetPage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-5">
-      <PageHeader title="Add timesheet" subtitle={isAdmin ? 'Admin timesheet' : selectedRole?.name ?? 'Staff timesheet'} />
+      <PageHeader
+        title={onBehalf ? 'Add employee timesheet' : 'Add timesheet'}
+        subtitle={adminOwn ? 'Admin timesheet' : onBehalf ? (targetEmployee ? `For ${targetEmployee.fullName}` : 'Create a timesheet on behalf of an employee') : selectedRole?.name ?? 'Staff timesheet'}
+      />
       <form className="card space-y-4 p-5" onSubmit={form.handleSubmit((v) => save(v, true))}>
+        {onBehalf && (
+          <Select
+            label="Employee"
+            value={selectedEmployeeId}
+            onChange={(event) => { setSelectedEmployeeId(event.target.value); if (event.target.value) setEmployeeError(''); }}
+            error={employeeError}
+          >
+            <option value="">{employees.isLoading ? 'Loading employees…' : 'Select employee'}</option>
+            {(employees.data?.items ?? []).map((item) => (
+              <option key={item._id} value={item._id}>{item.fullName} ({item.employeeId})</option>
+            ))}
+          </Select>
+        )}
         <Input label="Date" type="date" {...form.register('date')} />
         <div className="grid grid-cols-2 gap-3">
           <TimeInput label="Start time" value={watch.startTime} onChange={(value) => form.setValue('startTime', value, { shouldValidate: true })} />
@@ -118,7 +158,7 @@ export function NewTimesheetPage() {
           <p className="text-3xl font-bold">{hours}</p>
           {hoursError && <p className="mt-2 text-sm text-red-600">{hoursError}</p>}
         </div>
-        {!isAdmin && assignedRoles.length > 1 && (
+        {!adminOwn && assignedRoles.length > 1 && (
           <Select label="Job role" {...form.register('jobRoleId', { required: true })} value={watch.jobRoleId ?? ''} error={form.formState.errors.jobRoleId?.message}>
             {assignedRoles.map((role) => (
               <option key={role._id} value={role._id}>
@@ -127,14 +167,14 @@ export function NewTimesheetPage() {
             ))}
           </Select>
         )}
-        {!isAdmin && assignedRoles.length <= 1 && <Input label="Job role" value={assignedRoles[0]?.name ?? primaryRole?.name ?? ''} readOnly />}
+        {!adminOwn && assignedRoles.length <= 1 && <Input label="Job role" value={assignedRoles[0]?.name ?? primaryRole?.name ?? ''} readOnly />}
         <CareHomeSelect {...form.register('careHomeId')} error={form.formState.errors.careHomeId?.message} />
-        {isAdmin ? (
+        {adminOwn ? (
           <Input label="Incharge / supervisor" value={superAdminName} readOnly />
         ) : (
           <Input label="Incharge / supervisor" {...form.register('inchargeName')} error={form.formState.errors.inchargeName?.message} />
         )}
-        {!isAdmin && (
+        {!adminOwn && (
           <div className="space-y-2">
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Care Home In-Charge Signature</p>
             <p className="text-xs text-slate-500">Ask the care home admin or incharge to sign here when the shift is confirmed.</p>
